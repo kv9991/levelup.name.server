@@ -5,21 +5,21 @@ module.exports = {
 			errors.push('Не заполнено поле "Системное имя"')
 		}
 
-		if (!inputs.postTitle.value) {
+		if (!inputs.postTitle) {
 			errors.push('Не заполнено поле "Заголовок"')
 		}
 
-		if (!inputs.postDescription.value) {
+		/* if (!inputs.postDescription) {
 			errors.push('Не заполнено поле "Превью-контент"')
 		}
 
-		if (!inputs.postContent.value) {
+		if (!inputs.postContent) {
 			errors.push('Не заполнено поле "Контент"')
 		}
 
-		if (!inputs.postContent.value) {
+		if (!inputs.postContent) {
 			errors.push('Не заполнено поле "Теги"')
-		}
+		} */
 
 		if (errors.length > 0) {
 			return {

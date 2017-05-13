@@ -33,6 +33,7 @@ router.post('/add', function (req, res) {
 
 router.get('/auth', function(req, res) {
 	var token = req.headers['authorization'] || false;
+	console.log(token)
 	if (token) { 
 	    var decoded = jwt.verify(token, config.secret);
 	    User.findOne({_id : decoded.userID}, function(err, user) {

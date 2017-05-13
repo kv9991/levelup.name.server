@@ -3,7 +3,7 @@ var router = express.Router()
 var Post = require('../models/post')
 var jwt = require('jsonwebtoken')
 var config = require('../config'); 
-var validation = require('../validation/user')
+var validation = require('../validation/post')
 var formidable = require('formidable')
 var util = require('util')
 var path = require('path')
@@ -19,6 +19,7 @@ router.get('/entries', function(req, res) {
 
 router.post('/add', function (req, res) {
 	var inputs = req.body;
+	console.log('hello');
 	var validate = validation.add(inputs);
 	if(validate.success) {
 		Post.create(inputs, function (err) {
@@ -64,22 +65,6 @@ router.get('/entries/:id/remove', function(req, res) {
 })
 
 
-router.post('/entries/:slug?/update', function(req, res) {
-	var inputs = req.body;
-	Post.update({ slug: req.params.slug }, { $set: inputs }, function(err) {
-		if(!err) {
-	  		res.json({
-	  			success: true
-	  		});
-	  	} else {
-	  		res.json({
-	  			success: false,
-	  			errors: err
-	  		})
-	  	}
-	})
-})
-
 router.post('/upload', function (req, res) {
 	var filename, dir, id;
 
@@ -90,9 +75,9 @@ router.post('/upload', function (req, res) {
 	form.uploadDir = path.join(process.cwd(), '/uploads')
 	form.keepExtensions = true;
 
-	// Парсим ID поста
+	// Парсим storage-id поста
 	form.on('field', function(field, value) {
-		if (field == 'postId') {
+		if (field == 'storage') {
 			id = value
 		}
     });
@@ -126,7 +111,23 @@ router.post('/upload', function (req, res) {
 			})
 		}
 	});
+})
 
+router.post('/entries/:id/update', function(req, res) {
+	var inputs = req.body;
+	Post.update({ '_id': req.params.id }, { $set: inputs }, function(err, post) {
+		if(!err) {
+	  		res.json({
+	  			success: true,
+	  			post: post
+	  		});
+	  	} else {
+	  		res.json({
+	  			success: false,
+	  			errors: err
+	  		})
+	  	}
+	})
 })
 
 
