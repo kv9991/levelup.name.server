@@ -19,7 +19,6 @@ router.get('/entries', function(req, res) {
 
 router.post('/add', function (req, res) {
 	var inputs = req.body;
-	console.log('hello');
 	var validate = validation.add(inputs);
 	if(validate.success) {
 		Post.create(inputs, function (err) {
@@ -63,7 +62,6 @@ router.get('/entries/:id/remove', function(req, res) {
 		}
 	})
 })
-
 
 router.post('/upload', function (req, res) {
 	var filename, dir, id;

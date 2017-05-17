@@ -11,6 +11,10 @@ module.exports = mongoose.model('Post', new Schema({
     postTags: Array,
     postLikes: Number,
     postFavorites: Array,
-    postImage: String
+    postImage: String,
+    updated: {
+    	type: Date,
+    	default: Date.now
+    }
 }));
 
