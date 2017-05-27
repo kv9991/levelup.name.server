@@ -13,6 +13,7 @@ var multer      = require('multer')
 var path        = require('path')
 
 // Route instances
+var comment     = require('./routes/comment.js')
 var page       = require('./routes/page.js')
 var user       = require('./routes/user.js')
 var post       = require('./routes/post.js')
@@ -31,6 +32,7 @@ app.use(cors({credentials: true}));
 // Static files
 app.use('/storage', express.static('uploads'));
 
+app.use('/comment', comment);
 app.use('/page', page);
 app.use('/user', user);
 app.use('/post', post);

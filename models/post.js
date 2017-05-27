@@ -9,7 +9,7 @@ module.exports = mongoose.model('Post', new Schema({
     postContent: String,
     postAuthor: String,
     postTags: Array,
-    postLikes: Number,
+    postLikes: Array,
     postFavorites: Array,
     postImage: String,
     updated: {

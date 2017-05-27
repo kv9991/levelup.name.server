@@ -78,7 +78,6 @@ router.post('/entries/:slug?/update', function(req, res) {
 	  		})
 	  	}
 	})
-
 })
 
 module.exports = router

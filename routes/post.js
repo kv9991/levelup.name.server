@@ -129,4 +129,51 @@ router.post('/entries/:id/update', function(req, res) {
 })
 
 
+router.get('/entries/:id/like', function(req, res) {
+	var token = req.headers['authorization'] || false;
+	var decoded = jwt.verify(token, config.secret);
+	var postID = req.params.id;
+	if(token) {
+		Post.findOne({ '_id': postID }, function(err, post) {
+			if(post.postLikes.indexOf(decoded.userID) == -1) {
+				Post.update({ '_id': postID }, { $push: { 'postLikes': decoded.userID }}, {safe: true, upsert: true})
+				.exec(function(err, pages) {
+					if(!err) {
+				  		res.json({
+				  			success: true,
+				  			message: 'Лайк поставлен'
+				  		});
+				  	} else {
+				  		res.json({
+				  			success: false,
+				  			errors: err
+				  		})
+				  	}
+				})
+			} else {
+				Post.update({ '_id': postID }, { $pull: { 'postLikes': decoded.userID }})
+				.exec(function(err, pages) {
+					if(!err) {
+				  		res.json({
+				  			success: true,
+				  			message: 'Лайк удалён'
+				  		});
+				  	} else {
+				  		res.json({
+				  			success: false,
+				  			errors: err
+				  		})
+				  	}
+				})
+			}
+		});
+	} else {
+		res.json({
+			success: false,
+			message: 'Неверный токен'
+		})
+	}
+})
+
+
 module.exports = router;

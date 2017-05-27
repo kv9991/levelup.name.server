@@ -12,6 +12,7 @@ module.exports = mongoose.model('User', new Schema({
     userPassword: String,
     userCompany: String,
     userDescription: String,
-    userBio: String
+    userBio: String,
+    userSubscriptions: Array
 }));
 

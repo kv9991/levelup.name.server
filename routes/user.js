@@ -96,10 +96,17 @@ router.get('/entries/:nickname', function(req, res) {
 })
 
 router.get('/entries/id/:id', function(req, res) {
-	var query = User.where({_id: req.params.id});
-	query.findOne(function(err, user) {
+	User.findOne({ '_id': req.params.id }, '-userPassword -__v', function(err, user) {
 		if(!err) {
 			res.json(user)
+		}
+	})
+})
+
+router.get('/entries/:id/field/:field', function(req, res) {
+	User.findOne({ '_id': req.params.id }, req.params.field, function(err, field) {
+		if(!err) {
+			res.json(field)
 		}
 	});
 })
@@ -139,6 +146,51 @@ router.post('/entries/:id/update', function(req, res) {
 	})
 })
 
+router.get('/:id/subscribe', function(req, res) {
+	var token = req.headers['authorization'] || false;
+	var decoded = jwt.verify(token, config.secret);
+	if(token) {
+		User.findOne({ '_id': decoded.userID }, function(err, user) {
+			if(user.userSubscriptions.indexOf(req.params.id) == -1) {
+				User.update({ '_id': decoded.userID }, { $push: { 'userSubscriptions': req.params.id }}, {safe: true, upsert: true})
+				.exec(function(err, pages) {
+					if(!err) {
+				  		res.json({
+				  			success: true,
+				  			message: 'Подписка оформлена'
+				  		});
+				  	} else {
+				  		res.json({
+				  			success: false,
+				  			errors: err
+				  		})
+				  	}
+				})
+			} else {
+				User.update({ '_id': decoded.userID }, { $pull: { 'userSubscriptions': req.params.id }})
+				.exec(function(err, pages) {
+					if(!err) {
+				  		res.json({
+				  			success: true,
+				  			message: 'Подписка удалена'
+				  		});
+				  	} else {
+				  		res.json({
+				  			success: false,
+				  			errors: err
+				  		})
+				  	}
+				})
+			}
+		});
+	} else {
+		res.json({
+			success: false,
+			message: 'Неверный токен'
+		})
+	}
+})
+
 router.get('/:id/posts', function(req, res) {
 	var query = Post.where({'postAuthor': req.params.id});
 	query.find(function(err, posts) {
@@ -147,7 +199,6 @@ router.get('/:id/posts', function(req, res) {
 		}
 	});
 })
-
 
 router.post('/upload', function (req, res) {
 	var filename, dir, slug;
