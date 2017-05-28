@@ -12,9 +12,14 @@ var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
 
 router.get('/entries', function(req, res) {
-  Post.find({}, function(err, entries) {
-    res.json(entries);
-  });
+  Post.find({}, {}, {
+	    skip:0, 
+	    limit:10, 
+	    sort:{ updated: -1 }
+	},
+	function(err, entries) {
+		res.json(entries);
+	});
 });   
 
 router.post('/add', function (req, res) {

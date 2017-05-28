@@ -13,6 +13,10 @@ module.exports = mongoose.model('User', new Schema({
     userCompany: String,
     userDescription: String,
     userBio: String,
-    userSubscriptions: Array
+    userSubscriptions: Array,
+    created: {
+        type: Date,
+        default: Date.now
+    }
 }));
 

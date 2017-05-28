@@ -192,13 +192,17 @@ router.get('/:id/subscribe', function(req, res) {
 })
 
 router.get('/:id/posts', function(req, res) {
-	var query = Post.where({'postAuthor': req.params.id});
-	query.find(function(err, posts) {
-		if(!err) {
-			res.json(posts)
-		}
+	Post.find({'postAuthor': req.params.id}, {}, {
+	    skip:0, 
+	    limit:10, 
+	    sort:{ updated: -1 }
+	},
+	function(err, posts) {
+		res.json(posts);
 	});
 })
+
+
 
 router.post('/upload', function (req, res) {
 	var filename, dir, slug;

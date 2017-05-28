@@ -20,20 +20,8 @@ module.exports = {
 			errors.push('Не заполнено поле "Пол"')
 		}
 
-		if (!inputs.userRole) {
-			errors.push('Не заполнено поле "Роль"')
-		}
-
 		if (!inputs.userPassword) {
 			errors.push('Не заполнено поле "Пароль"')
-		}
-
-		if (!inputs.userPasswordSecond) {
-			errors.push('Не заполнено поле "Повторите пароль"')
-		}
-
-		if (inputs.userPasswordSecond != inputs.userPassword) {
-			errors.push('Пароли не совпадают')
 		}
 
 		if (errors.length > 0) {
