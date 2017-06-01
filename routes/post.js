@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
 var Post = require('../models/post')
+var Tag  = require('../models/tag')
 var jwt = require('jsonwebtoken')
 var config = require('../config'); 
 var validation = require('../validation/post')
@@ -27,11 +28,25 @@ router.post('/add', function (req, res) {
 	var validate = validation.add(inputs);
 	if(validate.success) {
 		Post.create(inputs, function (err) {
-		  if (err) return console.log(err);
-		  res.json({ 
+			console.log(inputs)
+		  if (err) { 
+		  	return console.log(err)
+		  } else {
+		  	var tags = inputs.postTags.split(/[ ,]+/);
+		  	tags.forEach(function(item) {
+		  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
+		  			if(tag == null) {
+		  				Tag.create({
+				  			tagTitle: item
+				  		})
+		  			}
+		  		})
+		  	})
+		  	res.json({ 
 		    	success: true,
 		    	message: 'Пост успешно опубликован'
 		    });
+		  }
 		})
 	} else {
 		res.json({ 

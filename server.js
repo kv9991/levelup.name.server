@@ -14,9 +14,10 @@ var path        = require('path')
 
 // Route instances
 var comment     = require('./routes/comment.js')
-var page       = require('./routes/page.js')
-var user       = require('./routes/user.js')
-var post       = require('./routes/post.js')
+var page        = require('./routes/page.js')
+var user        = require('./routes/user.js')
+var post        = require('./routes/post.js')
+var tag         = require('./routes/tag.js')
 
 
 mongoose.connect(config.database);
@@ -36,6 +37,8 @@ app.use('/comment', comment);
 app.use('/page', page);
 app.use('/user', user);
 app.use('/post', post);
+app.use('/tag', tag);
+
 
 app.listen(port);
 console.log('> Сервер работает по адресу: http://localhost:' + port);
