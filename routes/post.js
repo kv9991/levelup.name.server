@@ -4,6 +4,7 @@ var Post = require('../models/post')
 var Tag  = require('../models/tag')
 var jwt = require('jsonwebtoken')
 var config = require('../config'); 
+var createSlug = require('../utils/createSlug.js')
 var validation = require('../validation/post')
 var formidable = require('formidable')
 var util = require('util')
@@ -11,6 +12,7 @@ var path = require('path')
 var fs = require('fs')
 var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
+
 
 router.get('/entries', function(req, res) {
   Post.find({}, {}, {
@@ -37,6 +39,7 @@ router.post('/add', function (req, res) {
 		  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
 		  			if(tag == null) {
 		  				Tag.create({
+		  					slug: createSlug(item),
 				  			tagTitle: item
 				  		})
 		  			}
@@ -135,7 +138,18 @@ router.post('/entries/:id/update', function(req, res) {
 	var inputs = req.body;
 	Post.update({ '_id': req.params.id }, { $set: inputs }, function(err, post) {
 		if(!err) {
-	  		res.json({
+			var tags = inputs.postTags.toString().split(/[ ,]+/);
+		  	tags.forEach(function(item) {
+		  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
+		  			if(tag == null) {
+		  				Tag.create({
+		  					slug: createSlug(item),
+				  			tagTitle: item
+				  		})
+		  			}
+		  		})
+		  	})
+		  	res.json({
 	  			success: true,
 	  			post: post
 	  		});

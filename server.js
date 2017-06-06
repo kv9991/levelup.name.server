@@ -18,6 +18,7 @@ var page        = require('./routes/page.js')
 var user        = require('./routes/user.js')
 var post        = require('./routes/post.js')
 var tag         = require('./routes/tag.js')
+var search      = require('./routes/search.js')
 
 
 mongoose.connect(config.database);
@@ -34,10 +35,11 @@ app.use(cors({credentials: true}));
 app.use('/storage', express.static('uploads'));
 
 app.use('/comment', comment);
-app.use('/page', page);
-app.use('/user', user);
-app.use('/post', post);
-app.use('/tag', tag);
+app.use('/page',    page);
+app.use('/user',    user);
+app.use('/post',    post);
+app.use('/tag',     tag);
+app.use('/search',  search);
 
 
 app.listen(port);

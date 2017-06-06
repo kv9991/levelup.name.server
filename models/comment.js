@@ -6,12 +6,6 @@ module.exports = mongoose.model('Comment', new Schema({
     commentPost: String,
     commentContent: String,
     commentChilds: Array,
-    commentLikes: {
-    	type: Number,
-    	default: 0
-    },
-    commentDate: {
-    	type: Date,
-    	default: Date.now
-    }
+    commentLikes: { type: Number, default: 0 },
+    commentDate: { type: Date, default: Date.now }
 }));

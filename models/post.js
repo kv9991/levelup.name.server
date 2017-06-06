@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-module.exports = mongoose.model('Post', new Schema({ 
+var postSchema = new Schema({ 
     slug: String, 
     storage: String,
     postTitle: String,
@@ -16,5 +16,14 @@ module.exports = mongoose.model('Post', new Schema({
     	type: Date,
     	default: Date.now
     }
-}));
+});
 
+postSchema.index({
+    'postTitle': 'text', 
+    'postDescription': 'text', 
+    'postContent': 'text',
+    'postTags': 'text'
+});
+
+var Post = mongoose.model('Post', postSchema)
+module.exports = Post;

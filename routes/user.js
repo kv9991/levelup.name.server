@@ -1,5 +1,6 @@
 var express = require('express')
 var router = express.Router()
+var mongoose = require('mongoose')
 var User = require('../models/user')
 var Post = require('../models/post')
 var jwt = require('jsonwebtoken')
@@ -45,6 +46,7 @@ router.get('/auth', function(req, res) {
 	if (token) { 
 	    var decoded = jwt.verify(token, config.secret);
 	    User.findOne({_id : decoded.userID}, function(err, user) {
+	    	console.log(user)
 	    	res.json(user);
 	    })
 	} else {
@@ -146,19 +148,23 @@ router.post('/entries/:id/update', function(req, res) {
 	})
 })
 
-router.get('/:id/subscribe', function(req, res) {
+
+// Убрать Author отсюда
+router.get('/:id/subscribe/author', function(req, res) {
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret);
 	if(token) {
 		User.findOne({ '_id': decoded.userID }, function(err, user) {
-			if(user.userSubscriptions.indexOf(req.params.id) == -1) {
-				User.update({ '_id': decoded.userID }, { $push: { 'userSubscriptions': req.params.id }}, {safe: true, upsert: true})
-				.exec(function(err, pages) {
+			if(user.userSubscriptions.authors.indexOf(req.params.id) == -1) {
+				User.update({ '_id': decoded.userID }, {$push : {'userSubscriptions.authors' : req.params.id}}, { safe: true, upsert: true })
+				.exec(function(err) {
 					if(!err) {
-				  		res.json({
-				  			success: true,
-				  			message: 'Подписка оформлена'
-				  		});
+						User.findByIdAndUpdate(req.params.id, {$inc: { 'userSubscribersCount': 1 }}, {upsert: true}, function(err, user) {
+				  			res.json({
+					  			success: true,
+					  			message: 'Подписка оформлена'
+					  		});
+				  		})
 				  	} else {
 				  		res.json({
 				  			success: false,
@@ -167,13 +173,15 @@ router.get('/:id/subscribe', function(req, res) {
 				  	}
 				})
 			} else {
-				User.update({ '_id': decoded.userID }, { $pull: { 'userSubscriptions': req.params.id }})
+				User.update({ '_id': decoded.userID }, {$pull : {'userSubscriptions.authors' : req.params.id}})
 				.exec(function(err, pages) {
 					if(!err) {
-				  		res.json({
-				  			success: true,
-				  			message: 'Подписка удалена'
-				  		});
+				  		User.findByIdAndUpdate(req.params.id, {$inc: { 'userSubscribersCount': -1 }}, {upsert: true}, function(err, user) {
+				  			res.json({
+					  			success: true,
+					  			message: 'Подписка удалена'
+					  		});
+				  		})
 				  	} else {
 				  		res.json({
 				  			success: false,
@@ -251,5 +259,97 @@ router.post('/upload', function (req, res) {
 		}
 	});
 })
+
+
+router.get('/entries/:id/getsubscriptions', function(req, res) {
+	User.findById(req.params.id, function(err, user) {
+		User.find({'_id' : { $in : user.userSubscriptions.authors }}, function(err, users) {
+			res.send(users)
+		})
+	})
+})
+
+router.post('/entries/:id/addsocial', function(req, res) {
+	var inputs = req.body;
+	var token = req.headers['authorization'] || false;
+	var decoded = jwt.verify(token, config.secret);
+
+		User.findOne({'_id': req.params.id}, function(err, user) {
+		var index = -1;
+		for(var i = 0, len = user.userSocials.length; i < len; i++) {
+		    if (user.userSocials[i].title === inputs.title) {
+		        index = i;
+		        break;
+		    }
+		}
+		if(index == -1) {
+			if(decoded.userID == req.params.id) {
+				User.findOneAndUpdate({'_id' : req.params.id}, {$push: {'userSocials' : { 'title': inputs.title, 'link': inputs.link} }}, {upsert:true, safe: true})
+				.exec(function(err, pages) {
+					if(!err) {
+				  		res.json({
+				  			success: true,
+				  			message: 'Обновлено'
+				  		});
+				  	} else {
+				  		res.json({
+				  			success: false,
+				  			errors: err
+				  		})
+				  	}
+				})
+			}
+		} else {
+			res.json({
+				success: false,
+				message: 'Уже существует'
+			})
+		}
+	})
+})
+
+/* router.get('/entries/:id/removesocial', function(req, res) {
+	var inputs = req.body;
+	User.findOneAndUpdate({'_id' : req.params.id}, {$set : {'userSocials' : []}}, {upsert:true})
+	.exec(function(err, pages) {
+		if(!err) {
+	  		res.json({
+	  			success: true,
+	  			message: 'Обновлено'
+	  		});
+	  	} else {
+	  		res.json({
+	  			success: false,
+	  			errors: err
+	  		})
+	  	}
+	})
+}) */
+
+
+router.get('/entries/:id/getlikecount', function(req, res) {
+	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
+		if(!err) {
+			var likes = 0;
+			posts.map((item) => {
+				item.postLikes.map((item) => {
+					likes++;
+				})
+			})
+
+			res.json({count: likes})
+		}
+	})
+})
+
+router.get('/entries/:id/getpostscount', function(req, res) {
+	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
+		if(!err) {
+			res.json({count: posts.length})
+		}
+	})
+})
+
+
 
 module.exports = router;

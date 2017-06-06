@@ -1,7 +1,7 @@
 var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
-module.exports = mongoose.model('User', new Schema({ 
+var userSchema = new Schema({ 
     slug: String, 
     userDescription: String,
     userName: String,
@@ -13,10 +13,19 @@ module.exports = mongoose.model('User', new Schema({
     userCompany: String,
     userDescription: String,
     userBio: String,
-    userSubscriptions: Array,
-    created: {
-        type: Date,
-        default: Date.now
-    }
-}));
+    userSocials: { type : Array , "default" : [] },
+    userSubscribersCount: { type: Number, default: 0 },
+    userSubscriptions: { authors: Array, tags: Array, blogs: Array },
+    created: { type: Date, default: Date.now }
+});
 
+userSchema.index({
+    'userName': 'text', 
+    'userDescription': 'text', 
+    'slug': 'text',
+    'userBio': 'text',
+    'userDescription': 'text'
+});
+
+var User = mongoose.model('User', userSchema)
+module.exports = User
