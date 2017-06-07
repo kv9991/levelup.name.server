@@ -14,6 +14,26 @@ var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
 
 
+router.post('/entries', function(req, res) {
+	var token = req.headers['authorization'] || false;
+	var decoded = jwt.verify(token, config.secret);
+	var options = req.body;
+	var query = {};
+
+	if(options.userID) { 
+		query.postAuthor = options.userID 
+	}
+
+	Post.find(query, {}, {
+		skip: options.skip, 
+		limit: options.perPage, 
+		sort:{ updated: -1 }
+	}, function(err, posts) {
+		console.log(posts)
+		res.json(posts)
+	})
+});  
+
 router.get('/entries', function(req, res) {
   Post.find({}, {}, {
 	    skip:0, 

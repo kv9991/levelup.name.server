@@ -351,5 +351,38 @@ router.get('/entries/:id/getpostscount', function(req, res) {
 })
 
 
+// Добавить каждой соц сети уникальный id (передавать через POST)
+router.post('/entries/:id/removesocial', function(req, res) {
+	var social = req.body;
+	var token = req.headers['authorization'] || false;
+
+	jwt.verify(token, config.secret, function(err, decoded) {
+		if(!err) { 
+			User.findOne({'_id' : req.params.id }, function(err, user) {
+				var index = -1;
+				for(var i = 0, len = user.userSocials.length; i < len; i++) {
+				    if (user.userSocials[i].title == social.title) {
+				        index = i;
+				        break;
+				    }
+				}
+				User.update({'_id' : req.params.id}, {$pull : {'userSocials': {'title' : social.title}}}, {upsert: true, safe: true}, function(err, response) {
+					res.json({
+						success: true,
+						message: 'Удаление прошло успешно'
+					})
+				})
+			})
+		} else {
+			res.json({
+				message: 'Неверный токен',
+				success: false
+			})
+		}
+	});
+
+})
+
+
 
 module.exports = router;

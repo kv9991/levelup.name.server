@@ -13,7 +13,7 @@ var userSchema = new Schema({
     userCompany: String,
     userDescription: String,
     userBio: String,
-    userSocials: { type : Array , "default" : [] },
+    userSocials: { type : Array , "default" : [] }, // Добавить каждой соц сети уникальный id
     userSubscribersCount: { type: Number, default: 0 },
     userSubscriptions: { authors: Array, tags: Array, blogs: Array },
     created: { type: Date, default: Date.now }
