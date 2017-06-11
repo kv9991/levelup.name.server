@@ -12,10 +12,7 @@ var postSchema = new Schema({
     postLikes: Array,
     postFavorites: Array,
     postImage: String,
-    updated: {
-    	type: Date,
-    	default: Date.now
-    }
+    updated: { type: Date, default: Date.now }
 });
 
 postSchema.index({

@@ -19,7 +19,7 @@ var user        = require('./routes/user.js')
 var post        = require('./routes/post.js')
 var tag         = require('./routes/tag.js')
 var search      = require('./routes/search.js')
-
+var blog        = require('./routes/blog.js')
 
 mongoose.connect(config.database);
 app.set('superSecret', config.secret);
@@ -35,11 +35,12 @@ app.use(cors({credentials: true}));
 app.use('/storage', express.static('uploads'));
 
 app.use('/comment', comment);
+app.use('/search',  search);
+app.use('/blog',    blog);
 app.use('/page',    page);
 app.use('/user',    user);
 app.use('/post',    post);
 app.use('/tag',     tag);
-app.use('/search',  search);
 
 
 app.listen(port);

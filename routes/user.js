@@ -43,15 +43,16 @@ router.post('/add', function (req, res) {
 
 router.get('/auth', function(req, res) {
 	var token = req.headers['authorization'] || false;
-	if (token) { 
-	    var decoded = jwt.verify(token, config.secret);
-	    User.findOne({_id : decoded.userID}, function(err, user) {
-	    	console.log(user)
-	    	res.json(user);
-	    })
-	} else {
-	    res.json(false);
-	}
+	decoded = jwt.verify(token, config.secret, function(err, decoded) {
+		if(!err) {
+		    User.findOne({_id : decoded.userID}, function(err, user) {
+		    	console.log(user)
+		    	res.json(user);
+		    })
+		} else {
+			res.json(false);
+		}
+	})
 })
 
 router.post('/auth', function(req, res) {
@@ -213,7 +214,7 @@ router.get('/:id/posts', function(req, res) {
 
 
 router.post('/upload', function (req, res) {
-	var filename, dir, slug;
+	var filename, dir, userID;
 
 	// Инициализируем парсер
 	var form = new formidable.IncomingForm();
@@ -222,17 +223,17 @@ router.post('/upload', function (req, res) {
 	form.uploadDir = path.join(process.cwd(), '/uploads/users/')
 	form.keepExtensions = true;
 
-	// Парсим storage-id поста
 	form.on('field', function(field, value) {
-		if (field == 'slug') {
-			slug = value
+		if(field == 'userID') {
+			userID = value
 		}
-    });
-	
+	})
+
 	// Парсим файл и переименовываем его
 	form.on('file', function(field, file) {
+		console.log(userID)
 		filename = randomString(16) + getExtension(file.type);
-		dir = form.uploadDir + slug;
+		dir = form.uploadDir + userID;
 		if (!fs.existsSync(dir)){
 		    fs.mkdirSync(dir);
 		}
@@ -272,39 +273,40 @@ router.get('/entries/:id/getsubscriptions', function(req, res) {
 router.post('/entries/:id/addsocial', function(req, res) {
 	var inputs = req.body;
 	var token = req.headers['authorization'] || false;
-	var decoded = jwt.verify(token, config.secret);
-
+	jwt.verify(token, config.secret, function(err, decoded) {
+		// добавить проверку на токен
 		User.findOne({'_id': req.params.id}, function(err, user) {
-		var index = -1;
-		for(var i = 0, len = user.userSocials.length; i < len; i++) {
-		    if (user.userSocials[i].title === inputs.title) {
-		        index = i;
-		        break;
-		    }
-		}
-		if(index == -1) {
-			if(decoded.userID == req.params.id) {
-				User.findOneAndUpdate({'_id' : req.params.id}, {$push: {'userSocials' : { 'title': inputs.title, 'link': inputs.link} }}, {upsert:true, safe: true})
-				.exec(function(err, pages) {
-					if(!err) {
-				  		res.json({
-				  			success: true,
-				  			message: 'Обновлено'
-				  		});
-				  	} else {
-				  		res.json({
-				  			success: false,
-				  			errors: err
-				  		})
-				  	}
+			var index = -1;
+			for(var i = 0, len = user.userSocials.length; i < len; i++) {
+			    if (user.userSocials[i].title === inputs.title) {
+			        index = i;
+			        break;
+			    }
+			}
+			if(index == -1) {
+				if(decoded.userID == req.params.id) {
+					User.findOneAndUpdate({'_id' : req.params.id}, {$push: {'userSocials' : { 'title': inputs.title, 'link': inputs.link} }}, {upsert:true, safe: true})
+					.exec(function(err, pages) {
+						if(!err) {
+					  		res.json({
+					  			success: true,
+					  			message: 'Обновлено'
+					  		});
+					  	} else {
+					  		res.json({
+					  			success: false,
+					  			errors: err
+					  		})
+					  	}
+					})
+				}
+			} else {
+				res.json({
+					success: false,
+					message: 'Уже существует'
 				})
 			}
-		} else {
-			res.json({
-				success: false,
-				message: 'Уже существует'
-			})
-		}
+		})
 	})
 })
 

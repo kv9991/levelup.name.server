@@ -65,7 +65,6 @@ router.get('/entries/:slug?', function(req, res) {
 
 router.post('/entries/:slug?/update', function(req, res) {
 	var inputs = req.body;
-	console.log(inputs)
 	Page.update({ slug: req.params.slug }, { $set: inputs }, function(err, page) {
 		if(!err) {
 	  		res.json({

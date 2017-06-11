@@ -17,7 +17,6 @@ router.post('/entries/add', function (req, res) {
 	var decoded = jwt.verify(token, config.secret);
 	if(token) {
 		var inputs = req.body;
-		console.log(inputs)
 		var validate = getValidate(inputs);	
 		if(validate.success) {
 			Comment.create(inputs, function (err) {

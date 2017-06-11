@@ -12,11 +12,10 @@ var path = require('path')
 var fs = require('fs')
 var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
+var User = require('../models/user.js')
 
 
 router.post('/entries', function(req, res) {
-	var token = req.headers['authorization'] || false;
-	var decoded = jwt.verify(token, config.secret);
 	var options = req.body;
 	var query = {};
 
@@ -29,7 +28,6 @@ router.post('/entries', function(req, res) {
 		limit: options.perPage, 
 		sort:{ updated: -1 }
 	}, function(err, posts) {
-		console.log(posts)
 		res.json(posts)
 	})
 });  
@@ -50,12 +48,10 @@ router.post('/add', function (req, res) {
 	var validate = validation.add(inputs);
 	if(validate.success) {
 		Post.create(inputs, function (err) {
-			console.log(inputs)
 		  if (err) { 
 		  	return console.log(err)
 		  } else {
-		  	var tags = inputs.postTags.split(/[ ,]+/);
-		  	tags.forEach(function(item) {
+		  	inputs.postTags.forEach(function(item) {
 		  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
 		  			if(tag == null) {
 		  				Tag.create({
@@ -184,49 +180,58 @@ router.post('/entries/:id/update', function(req, res) {
 
 
 router.get('/entries/:id/like', function(req, res) {
-	var token = req.headers['authorization'] || false;
-	var decoded = jwt.verify(token, config.secret);
 	var postID = req.params.id;
-	if(token) {
-		Post.findOne({ '_id': postID }, function(err, post) {
-			if(post.postLikes.indexOf(decoded.userID) == -1) {
-				Post.update({ '_id': postID }, { $push: { 'postLikes': decoded.userID }}, {safe: true, upsert: true})
-				.exec(function(err, pages) {
-					if(!err) {
-				  		res.json({
-				  			success: true,
-				  			message: 'Лайк поставлен'
-				  		});
-				  	} else {
-				  		res.json({
-				  			success: false,
-				  			errors: err
-				  		})
-				  	}
-				})
-			} else {
-				Post.update({ '_id': postID }, { $pull: { 'postLikes': decoded.userID }})
-				.exec(function(err, pages) {
-					if(!err) {
-				  		res.json({
-				  			success: true,
-				  			message: 'Лайк удалён'
-				  		});
-				  	} else {
-				  		res.json({
-				  			success: false,
-				  			errors: err
-				  		})
-				  	}
-				})
-			}
-		});
-	} else {
-		res.json({
-			success: false,
-			message: 'Неверный токен'
+	var token = req.headers['authorization'] || false;
+	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
+		if(!err) {
+			Post.findOne({ '_id': postID }, function(err, post) {
+				if(post.postLikes.indexOf(decoded.userID) == -1) {
+					Post.update({ '_id': postID }, { $push: { 'postLikes': decoded.userID }}, {safe: true, upsert: true})
+					.exec(function(err, pages) {
+						if(!err) {
+					  		res.json({
+					  			success: true,
+					  			message: 'Лайк поставлен'
+					  		});
+					  	} else {
+					  		res.json({
+					  			success: false,
+					  			errors: err
+					  		})
+					  	}
+					})
+				} else {
+					Post.update({ '_id': postID }, { $pull: { 'postLikes': decoded.userID }})
+					.exec(function(err, pages) {
+						if(!err) {
+					  		res.json({
+					  			success: true,
+					  			message: 'Лайк удалён'
+					  		});
+					  	} else {
+					  		res.json({
+					  			success: false,
+					  			errors: err
+					  		})
+					  	}
+					})
+				}
+			});
+		} else {
+			res.json({
+				success: false,
+				message: 'Неверный токен'
+			})
+		}
+	});
+})
+
+router.get('/entries/:id/wholikes', function(req, res) {
+	Post.findOne({'_id' : req.params.id}, function(err, post) {
+		User.find({'_id' : { $in : post.postLikes }} , function(err, users) {
+			res.json(users)
 		})
-	}
+	})
 })
 
 
