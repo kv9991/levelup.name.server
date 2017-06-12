@@ -4,8 +4,18 @@ var jwt = require('jsonwebtoken')
 var config = require('../config'); 
 var createSlug = require('../utils/createSlug.js')
 
+// for uploading images
+var formidable = require('formidable')
+var util = require('util')
+var path = require('path')
+var fs = require('fs')
+var randomString = require('../utils/randomString.js')
+var getExtension = require('../utils/getExtension.js')
+
+
 var Blog = require('../models/blog')
 
+// Отдает записи по указанным параметрам (пагинация)
 router.post('/entries', function(req, res) {
 	var options = req.body;
 	var query = {};
@@ -19,6 +29,7 @@ router.post('/entries', function(req, res) {
 	})
 });    
 
+// Добавляет запись
 router.post('/entries/add', function (req, res) {
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
@@ -50,14 +61,24 @@ router.post('/entries/add', function (req, res) {
 	});
 });
 
+// Возвращает одну запись по системному имени
 router.get('/entries/:slug', function (req, res) {
 	Blog.findOne({'slug' : req.params.slug}, function(err, blog) {
 		res.json(blog)
 	})
 });
 
+router.get('/entries/removeall', function (req, res) {
+	Blog.remove()
+})
 
-
-
+// Обновление одного поля (Работает совместно с глобальным методом updateField())
+router.post('/entries/:id/updatefield', function (req, res) {
+	data = req.body;
+	Blog.update({'_id' : req.params.id}, {[data.field] : data.value}, function(err) {
+		if(!err) return res.json({ success: true })
+		res.json(err)
+	})
+});
 
 module.exports = router

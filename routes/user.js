@@ -1,6 +1,7 @@
 var express = require('express')
 var router = express.Router()
 var mongoose = require('mongoose')
+var Comment = require('../models/comment')
 var User = require('../models/user')
 var Post = require('../models/post')
 var jwt = require('jsonwebtoken')
@@ -16,11 +17,19 @@ var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
 
 router.get('/entries', function(req, res) {
-  User.find({}, function(err, users) {
-    res.json(users);
-  });
+  	var options = req.body;
+	var query = {};
+
+	User.find(query, {}, {
+		skip: options.skip, 
+		limit: options.perPage, 
+		sort:{ updated: -1 }
+	}, function(err, users) {
+		res.json(users)
+	})
 });   
 
+// Заменить на entries/add
 router.post('/add', function (req, res) {
 	var inputs = req.body;
 	var validate = validation.add(inputs);	
@@ -41,12 +50,12 @@ router.post('/add', function (req, res) {
 	}
 });
 
+// Проверяет токен
 router.get('/auth', function(req, res) {
 	var token = req.headers['authorization'] || false;
 	decoded = jwt.verify(token, config.secret, function(err, decoded) {
 		if(!err) {
 		    User.findOne({_id : decoded.userID}, function(err, user) {
-		    	console.log(user)
 		    	res.json(user);
 		    })
 		} else {
@@ -55,6 +64,7 @@ router.get('/auth', function(req, res) {
 	})
 })
 
+// Выдает токен при авторизации
 router.post('/auth', function(req, res) {
   User.findOne({
     slug: req.body.slug
@@ -89,15 +99,16 @@ router.post('/auth', function(req, res) {
   });
 });
 
+// Выдает пользователя по никнейму
 router.get('/entries/:nickname', function(req, res) {
-	var query = User.where({slug: req.params.nickname});
-	query.findOne(function(err, user) {
+	User.findOne({'slug': req.params.nickname}, '-userPassword -__v', function(err, user) {
 		if(!err) {
 			res.json(user)
 		}
-	});
+	})
 })
 
+// Переделать на /entries/:id/byid
 router.get('/entries/id/:id', function(req, res) {
 	User.findOne({ '_id': req.params.id }, '-userPassword -__v', function(err, user) {
 		if(!err) {
@@ -106,6 +117,7 @@ router.get('/entries/id/:id', function(req, res) {
 	})
 })
 
+// Возвращает поле
 router.get('/entries/:id/field/:field', function(req, res) {
 	User.findOne({ '_id': req.params.id }, req.params.field, function(err, field) {
 		if(!err) {
@@ -114,13 +126,13 @@ router.get('/entries/:id/field/:field', function(req, res) {
 	});
 })
 
-
+// Удаляет пользователя
 router.get('/entries/:id/remove', function(req, res) {
 	User.findOne({_id: req.params.id}).remove(function(err) {
 		if(!err) {
 			res.json({
 				success: true,
-				message: `Документ успешно удалён`
+				message: `Пользователь успешно удалён`
 			})
 		} else {
 			res.json({
@@ -131,7 +143,7 @@ router.get('/entries/:id/remove', function(req, res) {
 	})
 })
 
-
+// Обновляет пользователя
 router.post('/entries/:id/update', function(req, res) {
 	var inputs = req.body;
 	User.update({ '_id': req.params.id }, { $set: inputs })
@@ -149,8 +161,18 @@ router.post('/entries/:id/update', function(req, res) {
 	})
 })
 
+// Обновляет одно поле
+router.post('/entries/:id/updatefield', function (req, res) {
+	data = req.body;
+	User.update({'_id' : req.params.id}, {[data.field] : data.value}, function(err) {
+		if(!err) return res.json({ success: true })
+		res.json(err)
+	})
+});
+
 
 // Убрать Author отсюда
+// Подписка на авторе. По токену определяется подписант
 router.get('/:id/subscribe/author', function(req, res) {
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret);
@@ -200,6 +222,8 @@ router.get('/:id/subscribe/author', function(req, res) {
 	}
 })
 
+// Устарел (у router.post уже есть данный метод)
+// Возвращает посты пользователя
 router.get('/:id/posts', function(req, res) {
 	Post.find({'postAuthor': req.params.id}, {}, {
 	    skip:0, 
@@ -211,57 +235,7 @@ router.get('/:id/posts', function(req, res) {
 	});
 })
 
-
-
-router.post('/upload', function (req, res) {
-	var filename, dir, userID;
-
-	// Инициализируем парсер
-	var form = new formidable.IncomingForm();
-	form.parse(req)
-	form.multiples = false;
-	form.uploadDir = path.join(process.cwd(), '/uploads/users/')
-	form.keepExtensions = true;
-
-	form.on('field', function(field, value) {
-		if(field == 'userID') {
-			userID = value
-		}
-	})
-
-	// Парсим файл и переименовываем его
-	form.on('file', function(field, file) {
-		console.log(userID)
-		filename = randomString(16) + getExtension(file.type);
-		dir = form.uploadDir + userID;
-		if (!fs.existsSync(dir)){
-		    fs.mkdirSync(dir);
-		}
-        fs.rename(file.path, dir + '/' + filename);
-    });
-
-	// Обрабатываем ошибки парсера
-    form.on('error', function(err) {
-		console.log('Ошибка при загрузке файла: \n' + err);
-	});
-
-    // Кидаем ответ после парсинга
-    form.on('end', function(err, fields, files) {
-    	if (!err) {
-			res.json({
-				filename: filename,
-				success: true
-			})
-		} else {
-			res.json({
-				success: false,
-				errors: err
-			})
-		}
-	});
-})
-
-
+// Возвращает подписки пользователя (объекты пользователей)
 router.get('/entries/:id/getsubscriptions', function(req, res) {
 	User.findById(req.params.id, function(err, user) {
 		User.find({'_id' : { $in : user.userSubscriptions.authors }}, function(err, users) {
@@ -270,6 +244,7 @@ router.get('/entries/:id/getsubscriptions', function(req, res) {
 	})
 })
 
+// Добавляет соц сеть
 router.post('/entries/:id/addsocial', function(req, res) {
 	var inputs = req.body;
 	var token = req.headers['authorization'] || false;
@@ -310,50 +285,8 @@ router.post('/entries/:id/addsocial', function(req, res) {
 	})
 })
 
-/* router.get('/entries/:id/removesocial', function(req, res) {
-	var inputs = req.body;
-	User.findOneAndUpdate({'_id' : req.params.id}, {$set : {'userSocials' : []}}, {upsert:true})
-	.exec(function(err, pages) {
-		if(!err) {
-	  		res.json({
-	  			success: true,
-	  			message: 'Обновлено'
-	  		});
-	  	} else {
-	  		res.json({
-	  			success: false,
-	  			errors: err
-	  		})
-	  	}
-	})
-}) */
-
-
-router.get('/entries/:id/getlikecount', function(req, res) {
-	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
-		if(!err) {
-			var likes = 0;
-			posts.map((item) => {
-				item.postLikes.map((item) => {
-					likes++;
-				})
-			})
-
-			res.json({count: likes})
-		}
-	})
-})
-
-router.get('/entries/:id/getpostscount', function(req, res) {
-	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
-		if(!err) {
-			res.json({count: posts.length})
-		}
-	})
-})
-
-
 // Добавить каждой соц сети уникальный id (передавать через POST)
+// Удаляет соц сеть
 router.post('/entries/:id/removesocial', function(req, res) {
 	var social = req.body;
 	var token = req.headers['authorization'] || false;
@@ -384,6 +317,54 @@ router.post('/entries/:id/removesocial', function(req, res) {
 	});
 
 })
+
+router.get('/entries/:id/getstats', function(req, res) {
+	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
+		User.findOne({'_id': req.params.id}, function(err, user) {
+			if(err) { return res.json(err) }
+			var likes = 0;
+			posts.map((item) => {
+				item.postLikes.map((item) => {
+					likes++;
+				})
+			})
+			Comment.find({'commentAuthor': req.params.id}, function(err, comments) {
+				res.json({
+					likes: likes,
+					posts: posts.length,
+					score: user.userScore,
+					comments: comments.length,
+					subscribers: user.userSubscribersCount
+				})
+			})
+		})
+	})
+})
+
+
+router.get('/entries/:id/getlikecount', function(req, res) {
+	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
+		if(!err) {
+			var likes = 0;
+			posts.map((item) => {
+				item.postLikes.map((item) => {
+					likes++;
+				})
+			})
+
+			res.json({count: likes})
+		}
+	})
+})
+
+router.get('/entries/:id/getpostscount', function(req, res) {
+	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
+		if(!err) {
+			res.json({count: posts.length})
+		}
+	})
+})
+
 
 
 

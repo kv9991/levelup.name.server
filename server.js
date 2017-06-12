@@ -18,6 +18,7 @@ var page        = require('./routes/page.js')
 var user        = require('./routes/user.js')
 var post        = require('./routes/post.js')
 var tag         = require('./routes/tag.js')
+var appl         = require('./routes/app.js')
 var search      = require('./routes/search.js')
 var blog        = require('./routes/blog.js')
 
@@ -40,6 +41,7 @@ app.use('/blog',    blog);
 app.use('/page',    page);
 app.use('/user',    user);
 app.use('/post',    post);
+app.use('/app',     appl);
 app.use('/tag',     tag);
 
 
