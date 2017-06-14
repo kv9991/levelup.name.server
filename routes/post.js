@@ -20,7 +20,10 @@ router.post('/entries', function(req, res) {
 	var query = {};
 
 	if(options.userID) { 
-		query.postAuthor = options.userID 
+		query.postAuthor = options.userID
+	}
+	if(options.postTypes) {
+		query.postType = {$in : options.postTypes}
 	}
 
 	Post.find(query, {}, {
@@ -29,6 +32,29 @@ router.post('/entries', function(req, res) {
 		sort:{ updated: -1 }
 	}, function(err, posts) {
 		res.json(posts)
+	})
+});  
+
+router.get('/entries/personal', function(req, res) {
+	var token = req.headers['authorization'] || false;
+	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
+		console.log(err)
+		if(!err) {
+			User.findOne({'_id' : decoded.userID}, function(err, user) {
+				console.log(user)
+				Post.find({'postAuthor' : {$in : user.userSubscriptions.users}}, {}, {
+					skip: req.query.skip, 
+					limit: 10, 
+					sort:{ updated: -1 }
+				}, function(err, posts) {
+					return res.json(posts)
+				})
+			})
+		} else {
+			Post.find({}, function(err, posts) {
+				return res.json(posts)
+			})
+		}
 	})
 });  
 
@@ -47,26 +73,35 @@ router.post('/add', function (req, res) {
 	var inputs = req.body;
 	var validate = validation.add(inputs);
 	if(validate.success) {
-		Post.create(inputs, function (err) {
-		  if (err) { 
-		  	return console.log(err)
-		  } else {
-		  	inputs.postTags.forEach(function(item) {
-		  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
-		  			if(tag == null) {
-		  				Tag.create({
-		  					slug: createSlug(item),
-				  			tagTitle: item
-				  		})
-		  			}
-		  		})
-		  	})
-		  	res.json({ 
-		    	success: true,
-		    	message: 'Пост успешно опубликован'
-		    });
-		  }
-		})
+		if(inputs.postType == 'post') {
+			Post.create(inputs, function (err, post) {
+			  if (err) { return console.log(err) 
+			  	} else {
+			  	inputs.postTags.forEach(function(item) {
+			  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
+			  			if(tag == null) { Tag.create({
+			  					slug: createSlug(item),
+					  			tagTitle: item
+					  		})
+			  			}
+			  		})
+			  	})
+			  	res.json({ 
+			    	success: true,
+			    	message: 'Пост успешно опубликован',
+			    	post: post
+			    });
+			  }
+			})
+		} else {
+			Post.create(inputs, function(err, post) {
+				res.json({
+					success: true,
+					message: 'Пост успешно опубликован',
+					post: post
+				})
+			})
+		}
 	} else {
 		res.json({ 
 	    	success: false,
@@ -185,13 +220,15 @@ router.get('/entries/:id/like', function(req, res) {
 	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
 		if(!err) {
 			Post.findOne({ '_id': postID }, function(err, post) {
+				console.log(err)
 				if(post.postLikes.indexOf(decoded.userID) == -1) {
 					Post.update({ '_id': postID }, { $push: { 'postLikes': decoded.userID }}, {safe: true, upsert: true})
-					.exec(function(err, pages) {
+					.exec(function(err) {
 						if(!err) {
 					  		res.json({
 					  			success: true,
-					  			message: 'Лайк поставлен'
+					  			message: 'Лайк поставлен',
+					  			counter: post.postLikes.length + 1
 					  		});
 					  	} else {
 					  		res.json({
@@ -202,11 +239,12 @@ router.get('/entries/:id/like', function(req, res) {
 					})
 				} else {
 					Post.update({ '_id': postID }, { $pull: { 'postLikes': decoded.userID }})
-					.exec(function(err, pages) {
+					.exec(function(err) {
 						if(!err) {
 					  		res.json({
 					  			success: true,
-					  			message: 'Лайк удалён'
+					  			message: 'Лайк удалён',
+					  			counter: post.postLikes.length - 1
 					  		});
 					  	} else {
 					  		res.json({

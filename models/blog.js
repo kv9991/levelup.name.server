@@ -10,6 +10,7 @@ var blogSchema = new Schema({
     blogTags: Array,
     blogLikes: Array,
     blogImage: String,
+    blogSubscribersCount: {type: Number, default: 0},
     created: { type: Date, default: Date.now }
 });
 

@@ -16,7 +16,7 @@ var userSchema = new Schema({
     userScore: {type: Number, default: 0},
     userSocials: { type : Array , "default" : [] }, // Добавить каждой соц сети уникальный id
     userSubscribersCount: { type: Number, default: 0 },
-    userSubscriptions: { authors: Array, tags: Array, blogs: Array },
+    userSubscriptions: { users: Array, tags: Array, blogs: Array },
     created: { type: Date, default: Date.now }
 });
 

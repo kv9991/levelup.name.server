@@ -4,6 +4,7 @@ var mongoose = require('mongoose')
 var Comment = require('../models/comment')
 var User = require('../models/user')
 var Post = require('../models/post')
+var Blog = require('../models/blog')
 var jwt = require('jsonwebtoken')
 var config = require('../config'); 
 var validation = require('../validation/user')
@@ -171,15 +172,14 @@ router.post('/entries/:id/updatefield', function (req, res) {
 });
 
 
-// Убрать Author отсюда
 // Подписка на авторе. По токену определяется подписант
-router.get('/:id/subscribe/author', function(req, res) {
+router.get('/entries/:id/subscribe', function(req, res) {
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret);
 	if(token) {
 		User.findOne({ '_id': decoded.userID }, function(err, user) {
-			if(user.userSubscriptions.authors.indexOf(req.params.id) == -1) {
-				User.update({ '_id': decoded.userID }, {$push : {'userSubscriptions.authors' : req.params.id}}, { safe: true, upsert: true })
+			if(user.userSubscriptions.users.indexOf(req.params.id) == -1) {
+				User.update({ '_id': decoded.userID }, {$push : {'userSubscriptions.users' : req.params.id}}, { safe: true, upsert: true })
 				.exec(function(err) {
 					if(!err) {
 						User.findByIdAndUpdate(req.params.id, {$inc: { 'userSubscribersCount': 1 }}, {upsert: true}, function(err, user) {
@@ -196,7 +196,7 @@ router.get('/:id/subscribe/author', function(req, res) {
 				  	}
 				})
 			} else {
-				User.update({ '_id': decoded.userID }, {$pull : {'userSubscriptions.authors' : req.params.id}})
+				User.update({ '_id': decoded.userID }, {$pull : {'userSubscriptions.users' : req.params.id}})
 				.exec(function(err, pages) {
 					if(!err) {
 				  		User.findByIdAndUpdate(req.params.id, {$inc: { 'userSubscribersCount': -1 }}, {upsert: true}, function(err, user) {
@@ -238,7 +238,7 @@ router.get('/:id/posts', function(req, res) {
 // Возвращает подписки пользователя (объекты пользователей)
 router.get('/entries/:id/getsubscriptions', function(req, res) {
 	User.findById(req.params.id, function(err, user) {
-		User.find({'_id' : { $in : user.userSubscriptions.authors }}, function(err, users) {
+		User.find({'_id' : { $in : user.userSubscriptions.users }}, function(err, users) {
 			res.send(users)
 		})
 	})
@@ -341,26 +341,11 @@ router.get('/entries/:id/getstats', function(req, res) {
 	})
 })
 
-
-router.get('/entries/:id/getlikecount', function(req, res) {
-	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
+// Возвращает блог пользователя
+router.get('/entries/:id/getblog', function(req, res) {
+	Blog.findOne({'blogOwner' : req.params.id}, function(err, blog) {
 		if(!err) {
-			var likes = 0;
-			posts.map((item) => {
-				item.postLikes.map((item) => {
-					likes++;
-				})
-			})
-
-			res.json({count: likes})
-		}
-	})
-})
-
-router.get('/entries/:id/getpostscount', function(req, res) {
-	Post.find({'postAuthor' : req.params.id}, function(err, posts) {
-		if(!err) {
-			res.json({count: posts.length})
+			res.json(blog)
 		}
 	})
 })

@@ -2,6 +2,9 @@ var express = require('express')
 var router = express.Router()
 var jwt = require('jsonwebtoken')
 var config = require('../config'); 
+var User = require('../models/user.js')
+var mongoose = require('mongoose')
+var capitalize = require('../utils/capitalizeString.js')
 
 // for uploading images
 var formidable = require('formidable')
@@ -12,7 +15,7 @@ var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
 
 // Загрузка изображения
-router.post('/entries/:id/upload', function (req, res) {
+router.post('/entries/:id?/upload', function (req, res) {
 	var filename, dir, type, id;
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
@@ -30,12 +33,19 @@ router.post('/entries/:id/upload', function (req, res) {
 
 			// Парсим файл и переименовываем его
 			form.on('file', function(field, file) {
-				if(field == 'image') {
-					filename = randomString(16) + getExtension(file.type);
-					dir = form.uploadDir + '/' + type + '/' + id;
-					if (!fs.existsSync(dir)) { fs.mkdirSync(dir) }
-			        fs.rename(file.path, dir + '/' + filename);
-			    }
+					if(field == 'image') {
+						if(req.params.id) {
+							filename = randomString(16) + getExtension(file.type);
+							dir = form.uploadDir + '/' + type + '/' + id;
+							if (!fs.existsSync(dir)) { fs.mkdirSync(dir) }
+					        fs.rename(file.path, dir + '/' + filename);
+					    } else {
+					    	filename = randomString(16) + getExtension(file.type);
+							dir = form.uploadDir + '/temp';
+							if (!fs.existsSync(dir)) { fs.mkdirSync(dir) }
+					        fs.rename(file.path, dir + '/' + filename);
+					    }
+					} 
 		    });
 
 			// Обрабатываем ошибки парсера
@@ -64,6 +74,67 @@ router.post('/entries/:id/upload', function (req, res) {
 			})
 		}
 	});
+})
+
+// Изоморфная подписка 
+router.get('/entries/:id/subscribe/:type', function(req, res) {
+	var token = req.headers['authorization'] || false;
+	var decoded = jwt.verify(token, config.secret);
+	if(token) {
+		var Model = mongoose.models[capitalize(req.params.type)]
+		User.findOne({ '_id': decoded.userID }, function(err, user) {
+			var path = 'userSubscriptions.' + req.params.type + 's';
+			var update = {};
+			update[path] = req.params.id;
+			if(user.userSubscriptions[req.params.type + 's'].indexOf(req.params.id) == -1) {
+				User.update({ '_id': decoded.userID }, {$push : update}, { safe: true, upsert: true })
+				.exec(function(err) {
+					if(!err) {
+						var path = req.params.type +'SubscribersCount';
+						var count = {};
+						count[path] = 1;
+						Model.findByIdAndUpdate(req.params.id, {$inc: count}, {upsert: true}, function(err, user) {
+				  			console.log(err, user)
+				  			res.json({
+					  			success: true,
+					  			message: 'Подписка оформлена'
+					  		});
+				  		})
+				  	} else {
+				  		res.json({
+				  			success: false,
+				  			errors: err
+				  		})
+				  	}
+				})
+			} else {
+				User.update({ '_id': decoded.userID }, {$pull : update})
+				.exec(function(err, pages) {
+					if(!err) {
+						var path = req.params.type +'SubscribersCount';
+						var count = {};
+						count[path] = -1;
+				  		Model.findByIdAndUpdate(req.params.id, {$inc: count}, {upsert: true}, function(err, user) {
+				  			res.json({
+					  			success: true,
+					  			message: 'Подписка удалена'
+					  		});
+				  		})
+				  	} else {
+				  		res.json({
+				  			success: false,
+				  			errors: err
+				  		})
+				  	}
+				})
+			}
+		});
+	} else {
+		res.json({
+			success: false,
+			message: 'Неверный токен'
+		})
+	}
 })
 
 module.exports = router
