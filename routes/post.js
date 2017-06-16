@@ -13,18 +13,16 @@ var fs = require('fs')
 var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
 var User = require('../models/user.js')
+var mongoose = require('mongoose')
 
 
 router.post('/entries', function(req, res) {
 	var options = req.body;
 	var query = {};
 
-	if(options.userID) { 
-		query.postAuthor = options.userID
-	}
-	if(options.postTypes) {
-		query.postType = {$in : options.postTypes}
-	}
+	if(options.userID) { query['postAuthor.authorID'] = options.userID }
+	if(options.postTypes) { query.postType = { $in : options.postTypes } }
+	if(options.blogID) { query['postAuthor.authorID'] = options.blogID }
 
 	Post.find(query, {}, {
 		skip: options.skip, 
@@ -38,11 +36,11 @@ router.post('/entries', function(req, res) {
 router.get('/entries/personal', function(req, res) {
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
-		console.log(err)
 		if(!err) {
 			User.findOne({'_id' : decoded.userID}, function(err, user) {
-				console.log(user)
-				Post.find({'postAuthor' : {$in : user.userSubscriptions.users}}, {}, {
+				var array = user.userSubscriptions.users.concat(user.userSubscriptions.blogs)
+				var query = {'postAuthor.authorID' : {$in : array}};
+				Post.find(query, {}, {
 					skip: req.query.skip, 
 					limit: 10, 
 					sort:{ updated: -1 }
@@ -72,7 +70,7 @@ router.get('/entries', function(req, res) {
 router.post('/add', function (req, res) {
 	var inputs = req.body;
 	var validate = validation.add(inputs);
-	if(validate.success) {
+	if (validate.success) {
 		if(inputs.postType == 'post') {
 			Post.create(inputs, function (err, post) {
 			  if (err) { return console.log(err) 

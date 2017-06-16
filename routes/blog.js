@@ -36,6 +36,13 @@ router.get('/entries', function(req, res) {
 	})
 });  
 
+router.get('/entries/:id/byid', function(req, res) {
+	Blog.findOne({'_id' : req.params.id}, function(err, blog) {
+		if(err) { return res.json(false) }
+		res.json(blog)
+	})
+});  
+
 // Добавляет запись
 router.post('/entries/add', function (req, res) {
 	var token = req.headers['authorization'] || false;

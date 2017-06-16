@@ -8,7 +8,7 @@ var postSchema = new Schema({
     postType: {type: String, default: 'post'},
     postDescription: String,
     postContent: String,
-    postAuthor: String,
+    postAuthor: {authorType: {type: String, default: 'user'}, authorID: String},
     postTags: Array,
     postLikes: Array,
     postFavorites: Array,

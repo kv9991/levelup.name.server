@@ -2,15 +2,15 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var blogSchema = new Schema({ 
-    slug: {type: String}, 
-    blogTitle: {type: String},
-    blogDescription: {type: String},
-    blogOwner: {type: String},
+    slug: { type: String }, 
+    blogTitle: { type: String },
+    blogDescription: { type: String },
+    blogOwner: { type: String },
     blogStaff: { type: Array, default: [] },
     blogTags: Array,
     blogLikes: Array,
     blogImage: String,
-    blogSubscribersCount: {type: Number, default: 0},
+    blogSubscribersCount: {type: Number, default: 0 },
     created: { type: Date, default: Date.now }
 });
 

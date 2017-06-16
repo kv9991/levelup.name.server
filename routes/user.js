@@ -350,7 +350,16 @@ router.get('/entries/:id/getblog', function(req, res) {
 	})
 })
 
-
-
+// Возвращает маски пользователя
+router.get('/entries/:id/getfaces', function(req, res) {
+	var result = [];
+	Blog.findOne({'blogOwner' : req.params.id}, function(err, blog) {
+		result.push(blog);
+		Blog.find({'blogStaff' : {$in: [req.params.id]}}, function(err, blogs) {
+			result.concat(blogs);
+			res.json(result);
+		})
+	})
+})
 
 module.exports = router;
