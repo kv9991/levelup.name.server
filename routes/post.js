@@ -34,6 +34,7 @@ router.post('/entries', function(req, res) {
 });  
 
 router.get('/entries/personal', function(req, res) {
+	var query = { skip: req.query.skip || 0, limit: req.query.limit || 10 }
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
 		if(!err) {
@@ -41,25 +42,34 @@ router.get('/entries/personal', function(req, res) {
 				var array = user.userSubscriptions.users.concat(user.userSubscriptions.blogs)
 				var query = {'postAuthor.authorID' : {$in : array}};
 				Post.find(query, {}, {
-					skip: req.query.skip, 
-					limit: 10, 
+					skip: + req.query.skip, 
+					limit: + req.query.limit, 
 					sort:{ updated: -1 }
 				}, function(err, posts) {
 					return res.json(posts)
 				})
 			})
 		} else {
-			Post.find({}, function(err, posts) {
-				return res.json(posts)
-			})
+			Post.find({'postType': 'post'}, {}, {
+			    skip: + query.skip, 
+			    limit: + query.limit, 
+			    sort:{ updated: -1 }
+			},
+			function(err, entries) {
+				res.json(entries);
+			});
 		}
 	})
 });  
 
-router.get('/entries', function(req, res) {
-  Post.find({}, {}, {
-	    skip:0, 
-	    limit:10, 
+router.get('/popular', function(req, res) {
+	var query = { 
+		skip: req.query.skip || 0, 
+		limit: req.query.limit || 10 
+	}
+  	Post.find({'postType': 'post'}, {}, {
+	    skip: + query.skip, 
+	    limit: + query.limit, 
 	    sort:{ updated: -1 }
 	},
 	function(err, entries) {
@@ -187,17 +197,19 @@ router.post('/entries/:id/update', function(req, res) {
 	var inputs = req.body;
 	Post.update({ '_id': req.params.id }, { $set: inputs }, function(err, post) {
 		if(!err) {
-			var tags = inputs.postTags.toString().split(/[ ,]+/);
-		  	tags.forEach(function(item) {
-		  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
-		  			if(tag == null) {
-		  				Tag.create({
-		  					slug: createSlug(item),
-				  			tagTitle: item
-				  		})
-		  			}
-		  		})
-		  	})
+			if(inputs.postTags){
+				var tags = inputs.postTags.toString().split(/[ ,]+/);
+			  	tags.forEach(function(item) {
+			  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
+			  			if(tag == null) {
+			  				Tag.create({
+			  					slug: createSlug(item),
+					  			tagTitle: item
+					  		})
+			  			}
+			  		})
+			  	})
+			}
 		  	res.json({
 	  			success: true,
 	  			post: post
