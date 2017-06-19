@@ -42,11 +42,11 @@ router.post('/entries/add', function (req, res) {
 });
 
 router.get('/entries/:id', function(req, res) {
-	Comment.find({ 'commentPost': req.params.id }, '-__v', function(err, comments) {
-		if(!err) {
-			res.json(comments)
-		}
-	})
+	Comment.find({'commentPost': req.params.id})
+	.populate('commentAuthor')
+	.exec(function(err, comment) {
+	    res.json(comment);
+	});
 })
 
 

@@ -16,17 +16,16 @@ var User = require('../models/user.js')
 var mongoose = require('mongoose')
 
 
-router.post('/entries', function(req, res) {
-	var options = req.body;
+router.get('/entries', function(req, res) {
+	var options = req.query;
 	var query = {};
-
 	if(options.userID) { query['postAuthor.authorID'] = options.userID }
 	if(options.postTypes) { query.postType = { $in : options.postTypes } }
 	if(options.blogID) { query['postAuthor.authorID'] = options.blogID }
 
 	Post.find(query, {}, {
-		skip: options.skip, 
-		limit: options.perPage, 
+		skip: +options.skip, 
+		limit: +options.perPage, 
 		sort:{ updated: -1 }
 	}, function(err, posts) {
 		res.json(posts)

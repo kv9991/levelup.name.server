@@ -2,8 +2,8 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var commentSchema = new Schema({
-    commentAuthor: String,
-    commentPost: String,
+    commentAuthor: {type: String, ref: 'User'},
+    commentPost: {type: String, ref: 'Post'},
     commentContent: String,
     commentChilds: Array,
     commentLikes: { type: Number, default: 0 },

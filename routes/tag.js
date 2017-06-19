@@ -14,19 +14,16 @@ var randomString = require('../utils/randomString.js')
 var getExtension = require('../utils/getExtension.js')
 
 router.get('/entries', function(req, res) {
-  /* Post.find({}, {}, {
-	    skip:0, 
-	    limit:10, 
-	    sort:{ created: -1 }
-	},
-	function(err, entries) {
-		res.json(entries);
-	}); */
+	var options = req.query;
 
-	Tag.find({}, function(err, tags) {
-		res.json(tags);
-	});
-});   
+	Tag.find({}, {}, {
+		skip: +options.skip, 
+		limit: +options.perPage, 
+		sort:{ updated: -1 }
+	}, function(err, tags) {
+		res.json(tags)
+	})
+}); 
 
 router.get('/entries/:slug', function(req, res) {
 	Tag.findOne({'slug': req.params.slug}, function(err, tag) {
