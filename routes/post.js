@@ -119,10 +119,13 @@ router.post('/add', function (req, res) {
 
 
 router.get('/entries/:slug', function(req, res) {
-	var query = Post.where({slug: req.params.slug});
-	query.findOne(function(err, entry) {
+	Post.findOne({'slug': req.params.slug})
+	.populate('postLikes')
+	.exec(function(err, post) {
 		if(!err) {
-			res.json(entry)
+	    	res.json(post);
+		} else {
+			return(false)
 		}
 	});
 })

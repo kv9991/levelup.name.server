@@ -15,8 +15,7 @@ router.get('/entries', function(req, res) {
 					res.json({
 						posts: posts,
 						users: users,
-						blogs: blogs,
-						tags : tags
+						blogs: blogs
 					})
 				})
 			})
