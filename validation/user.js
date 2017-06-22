@@ -16,9 +16,6 @@ module.exports = {
 			errors.push('Не заполнено поле "E-mail"')
 		}
 
-		if (!inputs.userGender) {
-			errors.push('Не заполнено поле "Пол"')
-		}
 
 		if (!inputs.userPassword) {
 			errors.push('Не заполнено поле "Пароль"')

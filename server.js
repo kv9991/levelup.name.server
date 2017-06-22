@@ -14,11 +14,11 @@ var path        = require('path')
 
 // Route instances
 var comment     = require('./routes/comment.js')
-var page        = require('./routes/page.js')
+var module      = require('./routes/module.js')
 var user        = require('./routes/user.js')
 var post        = require('./routes/post.js')
 var tag         = require('./routes/tag.js')
-var appl         = require('./routes/app.js')
+var appl        = require('./routes/app.js')
 var search      = require('./routes/search.js')
 var blog        = require('./routes/blog.js')
 
@@ -35,14 +35,14 @@ app.use(cors({credentials: true}));
 // Static files
 app.use('/storage', express.static('uploads'));
 
-app.use('/comment', comment);
-app.use('/search',  search);
-app.use('/blog',    blog);
-app.use('/page',    page);
-app.use('/user',    user);
-app.use('/post',    post);
-app.use('/app',     appl);
-app.use('/tag',     tag);
+app.use('/module',    module);
+app.use('/comment',   comment);
+app.use('/search',    search);
+app.use('/blog',      blog);
+app.use('/user',      user);
+app.use('/post',      post);
+app.use('/app',       appl);
+app.use('/tag',       tag);
 
 
 app.listen(port);

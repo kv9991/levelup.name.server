@@ -1,19 +1,19 @@
 var express = require('express')
 var router = express.Router()
-var validation = require('../validation/page')
+var validation = require('../validation/module')
 
-var Page = require('../models/page')
+var Module = require('../models/module')
 
 router.post('/add', function (req, res) {
 	var inputs = req.body;
 	var validate = validation.add(inputs);	
 	if(validate.success) {
-		Page.create(inputs, function (err, page) {
+		Module.create(inputs, function (err, module) {
 		  if (err) return console.log(err);
 		  res.json({ 
 		    	success: true,
-		    	message: 'Страница успешно добавлена',
-		    	data: page
+		    	message: 'Модуль успешно добавлен',
+		    	data: module
 		    });
 		})
 	} else {
@@ -25,7 +25,7 @@ router.post('/add', function (req, res) {
 });
 
 router.get('/entries/:id/remove', function(req, res) {
-	Page.findOne({_id: req.params.id}).remove(function(err) {
+	Module.findOne({_id: req.params.id}).remove(function(err) {
 		if(!err) {
 			res.json({
 				success: true,
@@ -41,31 +41,27 @@ router.get('/entries/:id/remove', function(req, res) {
 })
 
 
-router.get('/entries/:slug?', function(req, res) {
-	if(req.params.slug) {
-		Page.findOne({ slug: req.params.slug })
-		.select(['-__v'])
-		.exec(function(err, pages) {
-			if(!err) {
-		  		res.json(pages);
-		  	} else {
-		  		res.json(err)
-		  	}
-		})
-	} else {
-		Page.find(function(err, pages) {
-		  	if(!err) {
-		  		res.json(pages);
-		  	} else {
-		  		res.json(err)
-		  	}
-		})
-	}
+router.get('/entries/', function(req, res) {
+	Module.find({}, function(err, modules) {
+		if(err) return res.json(false)
+		res.json(modules)
+	})
+})
+
+router.get('/entries/:slug', function(req, res) {
+	Module.findOne({ slug: req.params.slug })
+	.select(['-__v'])
+	.exec(function(err, module) {
+		if(!err) {
+	  		res.json(module);
+	  	} else {
+	  		res.json(err)
+	  	}
+	})
 })
 
 router.post('/entries/:slug?/update', function(req, res) {
-	var inputs = req.body;
-	Page.update({ slug: req.params.slug }, { $set: inputs }, function(err, page) {
+	Module.update({ slug: req.params.slug }, { $set: req.body }, function(err, module) {
 		if(!err) {
 	  		res.json({
 	  			success: true
