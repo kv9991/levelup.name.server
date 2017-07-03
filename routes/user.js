@@ -78,7 +78,7 @@ router.post('/auth', function(req, res) {
         res.json({ success: false, message: 'Пароль неверный' });
       } else {
         var token = jwt.sign({ userID: user._id }, config.secret, {
-          expiresIn : 60*60*24
+          expiresIn : 60*60*24*3
         });
         User.findOne({slug: user.slug}, function(err, user) {
         	if (!err) {

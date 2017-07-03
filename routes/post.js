@@ -18,10 +18,14 @@ var mongoose = require('mongoose')
 
 router.get('/entries', function(req, res) {
 	var options = req.query;
+	var query = { skip: req.query.skip || 0, limit: req.query.limit || 10 }
+	var token = req.headers['authorization'] || false;
 	var query = {};
 	if(options.userID) { query['postAuthor.authorID'] = options.userID }
-	if(options.postTypes) { query.postType = { $in : options.postTypes } }
+	if(options.type) { query['postType'] = { $in : options.type } }
+	if(options.status) { query['postStatus'] = { $in : options.status } }
 	if(options.blogID) { query['postAuthor.authorID'] = options.blogID }
+	if(!options.perPage) { options.perPage = 10 }
 
 	Post.find(query, {}, {
 		skip: +options.skip, 
@@ -32,6 +36,7 @@ router.get('/entries', function(req, res) {
 	})
 });  
 
+
 router.get('/entries/personal', function(req, res) {
 	var query = { skip: req.query.skip || 0, limit: req.query.limit || 10 }
 	var token = req.headers['authorization'] || false;
@@ -39,20 +44,20 @@ router.get('/entries/personal', function(req, res) {
 		if(!err) {
 			User.findOne({'_id' : decoded.userID}, function(err, user) {
 				var array = user.userSubscriptions.users.concat(user.userSubscriptions.blogs)
-				var query = {'postAuthor.authorID' : {$in : array}};
-				Post.find(query, {}, {
-					skip: + req.query.skip, 
-					limit: + req.query.limit, 
-					sort:{ updated: -1 }
+				var query = {'postAuthor.authorID' : {$in : array}, 'postStatus': 'published'};
+				Post.find(query, null, {
+					skip: +req.query.skip, 
+					limit: +req.query.limit, 
+					sort: { updated: -1 }
 				}, function(err, posts) {
 					return res.json(posts)
 				})
 			})
 		} else {
-			Post.find({'postType': 'post'}, {}, {
-			    skip: + query.skip, 
-			    limit: + query.limit, 
-			    sort:{ updated: -1 }
+			Post.find({'postType': 'post', 'postStatus': 'published'}, null, {
+			   skip: +query.skip, 
+			   limit: +query.limit, 
+			   sort:{ updated: -1 }
 			},
 			function(err, entries) {
 				res.json(entries);
@@ -195,9 +200,13 @@ router.post('/upload', function (req, res) {
 	});
 })
 
+router.get('/entries/removeblanks', function(req, res) {
+	Post.remove({postTitle: 'Безымянный'}).exec()
+})
+
 router.post('/entries/:id/update', function(req, res) {
 	var inputs = req.body;
-	Post.update({ '_id': req.params.id }, { $set: inputs }, function(err, post) {
+	Post.findOneAndUpdate({ '_id': req.params.id }, { $set: inputs }, function(err, post) {
 		if(!err) {
 			if(inputs.postTags){
 				var tags = inputs.postTags.toString().split(/[ ,]+/);
@@ -283,6 +292,15 @@ router.get('/entries/:id/wholikes', function(req, res) {
 		})
 	})
 })
+
+// Обновление одного поля (Работает совместно с глобальным методом updateField())
+router.post('/entries/:id/updatefield', function (req, res) {
+	data = req.body;
+	Post.update({'_id' : req.params.id}, {[data.field] : data.value}, function(err) {
+		if(!err) return res.json({ success: true })
+		res.json(err)
+	})
+});
 
 
 module.exports = router;

@@ -7,7 +7,7 @@ var moduleSchema = new Schema({
     moduleClassName: String,
     moduleDescription: {type: String},
     moduleShowTitle: Boolean,
-    moduleShowHeader: Boolean,
+    moduleHeader: {type: String, default: 'default'},
     moduleShowSidebar: Boolean,
     userMustBeLoggedIn: { type: Boolean, default: false },
     passLevel: { type: Number,  default: 0 }

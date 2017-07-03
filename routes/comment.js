@@ -19,11 +19,12 @@ router.post('/entries/add', function (req, res) {
 		var inputs = req.body;
 		var validate = getValidate(inputs);	
 		if(validate.success) {
-			Comment.create(inputs, function (err) {
+			Comment.create(inputs, function (err, comment) {
 			  if (err) return console.log(err);
 			  res.json({ 
 			    	success: true,
-			    	message: 'Комментарий успешно добавлен'
+			    	message: 'Комментарий успешно добавлен',
+			    	comment: comment
 			    });
 			})
 		} else {

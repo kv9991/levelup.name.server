@@ -9,7 +9,7 @@ var userSchema = new Schema({
     userGender: String,
     userRole: String,
     userImage: String,
-    userPassword: String,
+    userPassword: {type: String, default: ''},
     userCompany: String,
     userDescription: String,
     userBio: String,

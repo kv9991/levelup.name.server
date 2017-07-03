@@ -34,7 +34,6 @@ router.get('/entries/:slug', function(req, res) {
 router.get('/entries/:id/byuser', function(req, res) {
 	User.findOne({'_id': req.params.id}, function(err, user) {
 		Tag.find({'_id' : {$in: user.userSubscriptions.tags}}, function(err, tags) {
-			console.log(tags)
 			res.json(tags)
 		})
 	})

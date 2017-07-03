@@ -16,7 +16,7 @@ var getExtension = require('../utils/getExtension.js')
 
 // Загрузка изображения
 router.post('/entries/:id?/upload', function (req, res) {
-	var filename, dir, type, id;
+	var filename, dir, type, id, storage;
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
 		if(!err) { 
@@ -34,17 +34,14 @@ router.post('/entries/:id?/upload', function (req, res) {
 			// Парсим файл и переименовываем его
 			form.on('file', function(field, file) {
 					if(field == 'image') {
-						if(req.params.id) {
-							filename = randomString(16) + getExtension(file.type);
+						if(req.params.id != null) {
 							dir = form.uploadDir + '/' + type + '/' + id;
-							if (!fs.existsSync(dir)) { fs.mkdirSync(dir) }
-					        fs.rename(file.path, dir + '/' + filename);
-					    } else {
-					    	filename = randomString(16) + getExtension(file.type);
-							dir = form.uploadDir + '/temp';
-							if (!fs.existsSync(dir)) { fs.mkdirSync(dir) }
-					        fs.rename(file.path, dir + '/' + filename);
-					    }
+					   } else {
+					    	dir = form.uploadDir + '/temp';
+					   }
+					   filename = randomString(16) + getExtension(file.type);
+						if (!fs.existsSync(dir)) { fs.mkdirSync(dir) }
+					   fs.rename(file.path, dir + '/' + filename);
 					} 
 		    });
 

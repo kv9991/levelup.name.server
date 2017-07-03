@@ -9,13 +9,14 @@ var postSchema = new Schema({
     postDescription: String,
     postContent: String,
     postAuthor: {authorType: {type: String, default: 'user'}, authorID: {type: String, ref: 'User'}},
-    postTags: Array,
+    postTags: [{type: String}],
     postLikes: [{type: String, ref: 'User'}],
     postFavorites: Array,
     postImage: String,
     postCommentsCount: {type: Number, default : 0},
     postVideo: {type: String, default: null},
     postLink: {type: String, default: null},
+    postStatus: {type: String, default: 'draft'},
     updated: { type: Date, default: Date.now }
 });
 

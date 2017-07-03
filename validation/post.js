@@ -2,10 +2,6 @@ module.exports = {
 	add: function(inputs) {
 		var errors = []
 		if(inputs.postType == 'post') {
-			if (!inputs.slug) {
-				errors.push('Не заполнено поле "Системное имя"')
-			}
-
 			if (!inputs.postTitle) {
 				errors.push('Не заполнено поле "Заголовок"')
 			}
