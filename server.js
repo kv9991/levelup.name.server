@@ -11,6 +11,7 @@ var cookieParser= require('cookie-parser')
 var validator   = require('express-validator');
 var multer      = require('multer')
 var path        = require('path')
+var fs          = require('fs')
 
 // Route instances
 var comment     = require('./routes/comment.js')
@@ -43,6 +44,11 @@ app.use('/user',      user);
 app.use('/post',      post);
 app.use('/app',       appl);
 app.use('/tag',       tag);
+
+// Setting Up
+if (!fs.existsSync('uploads')) { 
+	fs.mkdirSync('uploads')
+}
 
 
 app.listen(port);
