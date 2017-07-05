@@ -135,6 +135,18 @@ router.get('/entries/:slug', function(req, res) {
 	});
 })
 
+router.get('/entries/:id/byid', function(req, res) {
+	Post.findOne({'_id': req.params.id})
+	.populate('postLikes')
+	.exec(function(err, post) {
+		if(!err) {
+	    	res.json(post);
+		} else {
+			return(false)
+		}
+	});
+})
+
 
 router.get('/entries/:id/remove', function(req, res) {
 	Post.findOne({_id: req.params.id}).remove(function(err) {
