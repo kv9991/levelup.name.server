@@ -10,18 +10,52 @@ router.get('/entries', function(req, res) {
 	var querystr = req.query.query
 	Post.find({$text: {$search: querystr}, 'postType': 'post'}, function(err, posts) {
 		User.find({$text: {$search: querystr}}, function(err, users) {
-			Tag.find({$text: {$search: querystr}} , function(err, tags) {
-				Blog.find({$text: {$search: querystr}}, function(err, blogs) {
-					res.json({
-						posts: posts,
-						users: users,
-						blogs: blogs
-					})
+			Blog.find({$text: {$search: querystr}}, function(err, blogs) {
+				res.json({
+					posts: posts,
+					users: users,
+					blogs: blogs
 				})
 			})
 		})
 	})
 });   
+
+router.get('/entries/tags', function(req, res) {
+	var querystr = req.query.query
+	Tag.find({$text: {$search: querystr}} , function(err, tags) {
+		res.json({
+			tags: tags
+		})
+	})
+});  
+
+router.get('/entries/blogs', function(req, res) {
+	var querystr = req.query.query
+	Blog.find({$text: {$search: querystr}} , function(err, blogs) {
+		res.json({
+			blogs: blogs
+		})
+	})
+});  
+
+router.get('/entries/posts', function(req, res) {
+	var querystr = req.query.query
+	Post.find({$text: {$search: querystr}} , function(err, posts) {
+		res.json({
+			posts: posts
+		})
+	})
+});  
+
+router.get('/entries/users', function(req, res) {
+	var querystr = req.query.query
+	User.find({$text: {$search: querystr}} , function(err, users) {
+		res.json({
+			users: users
+		})
+	})
+});  
 
 
 module.exports = router;
