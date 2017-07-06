@@ -31,8 +31,19 @@ router.get('/entries', function(req, res) {
 		skip: +options.skip, 
 		limit: +options.perPage, 
 		sort:{ updated: -1 }
-	}, function(err, posts) {
-		res.json(posts)
+	})
+	.populate('postComments')
+	.exec(function(err, results) {
+	    var options = {
+	      path: 'postComments.commentAuthor',
+	      model: 'User',
+	      select: 'userImage userName slug userDescription'
+	    };
+
+	    if (err) return res.json(500);
+	    Post.populate(results, options, function (err, posts) {
+	      res.json(posts);
+	    });
 	})
 });  
 
@@ -126,13 +137,20 @@ router.post('/add', function (req, res) {
 router.get('/entries/:slug', function(req, res) {
 	Post.findOne({'slug': req.params.slug})
 	.populate('postLikes')
-	.exec(function(err, post) {
-		if(!err) {
-	    	res.json(post);
-		} else {
-			return(false)
-		}
-	});
+	.populate('postComments')
+	.exec(function(err, results) {
+	    var options = {
+	      path: 'postComments.commentAuthor',
+	      model: 'User',
+	      select: 'userImage userName slug userDescription'
+	    };
+
+	    if (err) return res.json(500);
+	    Post.populate(results, options, function (err, posts) {
+	    	console.log(posts)
+	      res.json(posts);
+	    });
+	})
 })
 
 router.get('/entries/:id/byid', function(req, res) {

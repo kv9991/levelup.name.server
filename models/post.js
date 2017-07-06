@@ -13,6 +13,7 @@ var postSchema = new Schema({
     postLikes: [{type: String, ref: 'User'}],
     postFavorites: Array,
     postImage: String,
+    postComments: [{type: String, ref: 'Comment'}],
     postCommentsCount: {type: Number, default : 0},
     postVideo: {type: String, default: null},
     postLink: {type: String, default: null},

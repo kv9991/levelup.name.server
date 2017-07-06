@@ -4,6 +4,7 @@ var getValidate = require('../validation/comment.js')
 var jwt = require('jsonwebtoken')
 var config = require('../config'); 
 
+var Post = require('../models/post')
 var Comment = require('../models/comment')
 
 router.get('/entries', function(req, res) {
@@ -15,31 +16,27 @@ router.get('/entries', function(req, res) {
 router.post('/entries/add', function (req, res) {
 	var token = req.headers['authorization'] || false;
 	var decoded = jwt.verify(token, config.secret);
-	if(token) {
+	if (token) {
 		var inputs = req.body;
-		var validate = getValidate(inputs);	
-		if(validate.success) {
-			Comment.create(inputs, function (err, comment) {
-			  if (err) return console.log(err);
-			  res.json({ 
-			    	success: true,
-			    	message: 'Комментарий успешно добавлен',
-			    	comment: comment
-			    });
-			})
+		var postID = inputs.commentPost;
+		Comment.create(inputs, function (err, comment) {
+		  	if (err) return console.log(err);
+		  	Post.update({'_id' : postID}, {$push: { 'postComments': comment._id }}, {safe: true, upsert: true})
+			  	.exec(function(err, post) {
+			  		res.json({ 
+				    	success: true,
+				    	message: 'Комментарий успешно добавлен',
+				    	comment: comment,
+				    	post: post
+				   });
+			  	})
+		  	})	
 		} else {
-			res.json({ 
-		    	success: false,
-		    	errors: validate.errors
-		    });
+			res.json({
+				success: false,
+				message: 'Неверный токен'
+			})
 		}
-	} else {
-		res.json({
-			success: false,
-			message: 'Неверный токен'
-		})
-	}
-
 });
 
 router.get('/entries/:id', function(req, res) {
