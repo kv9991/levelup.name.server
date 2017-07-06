@@ -6,6 +6,7 @@ var config = require('../config');
 
 var Post = require('../models/post')
 var Comment = require('../models/comment')
+var User = require('../models/user')
 
 router.get('/entries', function(req, res) {
   Comment.find({}, function(err, entries) {
@@ -45,6 +46,71 @@ router.get('/entries/:id', function(req, res) {
 	.exec(function(err, comment) {
 	    res.json(comment);
 	});
+})
+
+router.get('/entries/:id/remove', function(req, res) {
+	var token = req.headers['authorization'] || false;
+	var id = req.params.id;
+	jwt.verify(token, config.secret, function(err, decoded) {
+		if(err) { 
+			return res.json({
+				success: false,
+				message: 'Неверный токен'
+			})
+		} else {
+			Comment.findOne({'_id' : id}, function(err, comment) {
+				User.findOne({'_id' : decoded.userID}, function(err, user) {
+					if (user._id == comment.commentAuthor) {
+						Comment.remove({'_id' : id}, function(err, mongodb) {
+							res.json({
+								success: true,
+								message: 'Комментарий удалён!',
+								mongodb: mongodb
+							})
+						})
+					} else {
+						res.json({
+							success: false,
+							message: 'Недостаточно прав для удаления!'
+						})
+					}
+				})
+			})
+		}
+	})
+})
+
+router.post('/entries/:id/update', function(req, res) {
+	var token = req.headers['authorization'] || false;
+	var inputs = req.body;
+	var id = req.params.id;
+	jwt.verify(token, config.secret, function(err, decoded) {
+		if(err) { 
+			return res.json({
+				success: false,
+				message: 'Неверный токен'
+			})
+		} else {
+			Comment.findOne({'_id' : id}, function(err, comment) {
+				User.findOne({'_id' : decoded.userID}, function(err, user) {
+					if (user._id == comment.commentAuthor) {
+						Comment.update({'_id' : id}, {$set: inputs}, {safe: true, upsert: false}, function(err, updatedComment) {
+							res.json({
+								success: true,
+								message: 'Комментарий обновлён!',
+								comment: updatedComment
+							})
+						})
+					} else {
+						res.json({
+							success: false,
+							message: 'Недостаточно прав для удаления!'
+						})
+					}
+				})
+			})
+		}
+	})
 })
 
 
