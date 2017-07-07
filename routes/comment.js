@@ -16,13 +16,13 @@ router.get('/entries', function(req, res) {
 
 router.post('/entries/add', function (req, res) {
 	var token = req.headers['authorization'] || false;
-	var decoded = jwt.verify(token, config.secret);
-	if (token) {
-		var inputs = req.body;
-		var postID = inputs.commentPost;
-		Comment.create(inputs, function (err, comment) {
-		  	if (err) return console.log(err);
-		  	Post.update({'_id' : postID}, {$push: { 'postComments': comment._id }}, {safe: true, upsert: true})
+	jwt.verify(token, config.secret, function(err, decoded) {
+		if (!err) {
+			var inputs = req.body;
+			var postID = inputs.commentPost;
+			Comment.create(inputs, function (err, comment) {
+			  	if (err) return console.log(err);
+			  	Post.update({'_id' : postID}, {$push: { 'postComments': comment._id }}, {safe: true, upsert: true})
 			  	.exec(function(err, post) {
 			  		res.json({ 
 				    	success: true,
@@ -38,6 +38,7 @@ router.post('/entries/add', function (req, res) {
 				message: 'Неверный токен'
 			})
 		}
+	})
 });
 
 router.get('/entries/:id', function(req, res) {
@@ -59,22 +60,29 @@ router.get('/entries/:id/remove', function(req, res) {
 			})
 		} else {
 			Comment.findOne({'_id' : id}, function(err, comment) {
-				User.findOne({'_id' : decoded.userID}, function(err, user) {
-					if (user._id == comment.commentAuthor) {
-						Comment.remove({'_id' : id}, function(err, mongodb) {
-							res.json({
-								success: true,
-								message: 'Комментарий удалён!',
-								mongodb: mongodb
+				if(comment) {
+					User.findOne({'_id' : decoded.userID}, function(err, user) {
+						if (user._id == comment.commentAuthor) {
+							Comment.remove({'_id' : id}, function(err, mongodb) {
+								res.json({
+									success: true,
+									message: 'Комментарий удалён!',
+									mongodb: mongodb
+								})
 							})
-						})
-					} else {
-						res.json({
-							success: false,
-							message: 'Недостаточно прав для удаления!'
-						})
-					}
-				})
+						} else {
+							res.json({
+								success: false,
+								message: 'Недостаточно прав для удаления!'
+							})
+						}
+					})
+				} else {
+					return res.json({
+						success: false,
+						message: 'Комментарий не найден!'
+					})
+				}
 			})
 		}
 	})

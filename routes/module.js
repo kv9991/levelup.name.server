@@ -61,7 +61,6 @@ router.get('/entries/:slug', function(req, res) {
 })
 
 router.post('/entries/:id/update', function(req, res) {
-	console.log(req.body)
 	Module.update({ '_id': req.params.id }, { $set: req.body }, function(err, module) {
 		if(!err) {
 	  		res.json({

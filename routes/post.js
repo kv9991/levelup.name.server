@@ -32,7 +32,12 @@ router.get('/entries', function(req, res) {
 		limit: +options.perPage, 
 		sort:{ updated: -1 }
 	})
-	.populate('postComments')
+	.populate({
+	  	path: 'postComments',
+	  	options: {
+		   sort: { commentDate: 1 }
+	  	}
+	})
 	.exec(function(err, results) {
 	    var options = {
 	      path: 'postComments.commentAuthor',
