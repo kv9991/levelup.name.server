@@ -20,7 +20,6 @@ var getExtension = require('../utils/getExtension.js')
 router.get('/entries', function(req, res) {
   	var options = req.body;
 	var query = {};
-
 	User.find(query, {}, {
 		skip: options.skip, 
 		limit: options.perPage, 
@@ -29,27 +28,6 @@ router.get('/entries', function(req, res) {
 		res.json(users)
 	})
 });   
-
-// Заменить на entries/add
-router.post('/add', function (req, res) {
-	var inputs = req.body;
-	var validate = validation.add(inputs);	
-	if(validate.success) {
-		User.create(inputs, function (err, user) {
-		  if (err) return console.log(err);
-		  res.json({ 
-		    	success: true,
-		    	message: 'Пользователь успешно добавлен',
-		    	data: user
-		    });
-		})
-	} else {
-		res.json({ 
-	    	success: false,
-	    	errors: validate.errors
-	    });
-	}
-});
 
 // Проверяет токен
 router.get('/auth', function(req, res) {
@@ -66,38 +44,75 @@ router.get('/auth', function(req, res) {
 })
 
 // Выдает токен при авторизации
-router.post('/auth', function(req, res) {
-  User.findOne({
-    slug: req.body.slug
-  }, function(err, user) {
-    if (err) throw err;
-    if (!user) {
-      res.json({ success: false, message: 'Пользователь не найден' });
-    } else if (user) {
-      if (user.userPassword != req.body.userPassword) {
-        res.json({ success: false, message: 'Пароль неверный' });
-      } else {
-        var token = jwt.sign({ userID: user._id }, config.secret, {
-          expiresIn : 60*60*24*3
-        });
-        User.findOne({slug: user.slug}, function(err, user) {
-        	if (!err) {
-        		res.json({
-			        success: true,
-			        user: {
-			        	token: token
-			        }
-		        });
-        	} else {
-        		res.json({
-        			success: false,
-        			errors: err
-        		})
-        	}
-        })  
-      }   
-    }
-  });
+router.post('/signin', function(req, res) {
+  	User.findOne({
+    	'slug': req.body.userLogin
+  	}, function(err, user) {
+    	if (!user) {
+      	res.json({ success: false, message: 'Пользователь не найден' });
+    	} else {
+	      if (user.userPassword != req.body.userPassword) {
+	        res.json({ success: false, message: 'Пароль неверный' });
+	      } else {
+	      	// Создаём токен
+	        	var token = jwt.sign({ userID: user._id }, config.secret, {
+	          	expiresIn : 60*60*24*3
+	        	});
+	        	User.findOne({slug: user.slug}, function(err, user) {
+		        	if (!err) {
+		        		// Отправляем токен и информацию о юзере
+		        		res.json({
+				        	success: true,
+				        	token: token,
+				        	user: user
+				      });
+		        	} else {
+		        		res.json({
+		        			success: false,
+		        			errors: err
+		        		})
+		        	}
+	        })  
+	      }   
+	   }
+  	});
+});
+
+// Выдает токен при авторизации
+router.post('/signup', function(req, res) {
+  	var data = req.body;
+	var valid = validation.signup(data);
+	if (valid.success) {
+		var user = {
+			slug: data.userLogin,
+			userName: data.userName,
+		   userEmail: data.userEmail,
+		   userGender: data.userGender,
+		   userPassword: data.userPassword,
+		   userDescription: data.userDescription
+		}	
+		User.create(user, function (err) {
+			if(!err) {
+			  	return res.json({ 
+			    	success: true,
+			    	message: 'Регистрация прошла успешно!',
+			    	errors: []
+			   });
+			} else {
+				return res.json({ 
+			    	success: false,
+			    	message: 'Неизвестная ошибка',
+			    	errors: err
+			   });
+			}
+		})
+	} else {
+		res.json({ 
+	    	success: false,
+	    	message: 'При регистрации возникли ошибки',
+	    	errors: valid.errors
+	    });
+	}
 });
 
 // Выдает пользователя по никнейму

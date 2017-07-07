@@ -1,25 +1,13 @@
 module.exports = {
-	add: function(inputs) {
+	signup: function(data) {
 		var errors = [];
 
-		console.log(inputs)
-
-		if (!inputs.slug) {
-			errors.push('Не заполнено поле "Логин"')
-		}
-
-		if (!inputs.userName) {
-			errors.push('Не заполнено поле "Полное имя"')
-		}
-
-		if (!inputs.userEmail) {
-			errors.push('Не заполнено поле "E-mail"')
-		}
-
-
-		if (!inputs.userPassword) {
-			errors.push('Не заполнено поле "Пароль"')
-		}
+		// Правила регистрации пользователя
+		if (!data.userLogin) { errors.push('Не заполнено поле "Логин"') }
+		if (!data.userName) { errors.push('Не заполнено поле "Полное имя"') }
+		if (!data.userEmail) { errors.push('Не заполнено поле "E-mail"') }
+		if (!data.userPassword) { errors.push('Не заполнено поле "Пароль"') }
+		if (data.userPassword != data.userPasswordRepeat) { errors.push('Не совпадают пароли') }
 
 		if (errors.length > 0) {
 			return {
@@ -31,6 +19,5 @@ module.exports = {
 				success: true
 			}
 		}
-
 	}
 }
