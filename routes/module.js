@@ -60,11 +60,13 @@ router.get('/entries/:slug', function(req, res) {
 	})
 })
 
-router.post('/entries/:slug?/update', function(req, res) {
-	Module.update({ slug: req.params.slug }, { $set: req.body }, function(err, module) {
+router.post('/entries/:id/update', function(req, res) {
+	console.log(req.body)
+	Module.update({ '_id': req.params.id }, { $set: req.body }, function(err, module) {
 		if(!err) {
 	  		res.json({
-	  			success: true
+	  			success: true,
+	  			module: module
 	  		});
 	  	} else {
 	  		res.json({
