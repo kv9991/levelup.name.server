@@ -1,78 +1,122 @@
-var express = require('express')
-var router = express.Router()
-var validation = require('../validation/module')
+import express from 'express'
+import * as isValid from '../validation/module'
+import Module from '../models/module'
+import jwt from 'jsonwebtoken'
+import { success, error } from '../utils/response.js'
+import config from '../config'
 
-var Module = require('../models/module')
+let router = express.Router()
 
-router.post('/add', function (req, res) {
-	var inputs = req.body;
-	var validate = validation.add(inputs);	
-	if(validate.success) {
-		Module.create(inputs, function (err, module) {
-		  if (err) return console.log(err);
-		  res.json({ 
-		    	success: true,
-		    	message: 'Модуль успешно добавлен',
-		    	data: module
-		    });
-		})
-	} else {
-		res.json({ 
-	    	success: false,
-	    	errors: validate.errors
-	    });
-	}
-});
+// Get Modules
+router.get('/entries/', (req, res) => {
+	const { skip, limit } = req.query
 
-router.get('/entries/:id/remove', function(req, res) {
-	Module.findOne({_id: req.params.id}).remove(function(err) {
-		if(!err) {
-			res.json({
-				success: true,
-				message: `Документ успешно удалён`
-			})
+	Module.find({}, {}, {
+		skip: +skip || 0, 
+		limit: +limit || 10, 
+		sort: { 
+			updated: -1
+		}
+	}, (err, modules) => {
+		if(!err && modules.length > 0) {
+			return res.status(200)
+			.json(modules)
 		} else {
-			res.json({
-				success:false,
-				message: err
-			})
+			return res.status(500)
+			.json(error(err, 'Ошибка при поиске модулей'))
 		}
 	})
 })
 
+// Create Module
+router.post('/entries', (req, res) => {
+	const newModule = req.body;
+	const validation = isValid.create(newModule);	
+	const token = req.headers['authorization'] || false;
 
-router.get('/entries/', function(req, res) {
-	Module.find({}, function(err, modules) {
-		if(err) return res.json(false)
-		res.json(modules)
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if(!err && decoded.userID) {
+			if(validation.success) {
+				Module.create(newModule, (err, createdModule) => {
+				  if(!err && module) {
+				  	return res.status(200)
+				  	.json(success('Модуль успешно добавлен', {
+				  		createdModule
+				  	}))
+				  }
+				})
+			} else {
+				return res.status(401)
+				.json(error(validation.errors, 'Ошибки при заполнении полей'))
+			}
+		} else {
+			return res.status(401)
+			.json(error(err, 'Неверный токен'))
+		}
+	})
+});
+
+// Remove module
+router.delete('/entries/:id', (req, res) => {
+	const { id } = req.params;
+	const token = req.headers['authorization'] || false;
+
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if(!err && decoded.userID) {
+			Module.findByIdAndRemove(id, (err, mongodb) => {
+				if(!err && mongodb) {
+					return res.status(200)
+					.json(success('Модуль успешно удалён'))
+				} else {
+					return res.status(500)
+					.json(error(err, 'Ошибка при удалении'))
+				}
+			})
+		} else {
+			res.status(401)
+			.json(error(err, 'Неверный токен'))
+		}
 	})
 })
 
-router.get('/entries/:slug', function(req, res) {
-	Module.findOne({ slug: req.params.slug })
-	.select(['-__v'])
-	.exec(function(err, module) {
-		if(!err) {
-	  		res.json(module);
-	  	} else {
-	  		res.json(err)
-	  	}
-	})
+// Get Module By Slug
+router.get('/entries/:slug', (req, res) => {
+	const { slug } = req.params
+
+	Module.findOne({ slug }, '-__v', (err, module) => {
+		if(!err && module) {
+			return res.status(200)
+			.json(module)
+		} else {
+			return res.status(404)
+			.json(error(err, 'Модуль не найден'))
+		}
+	})	
 })
 
-router.post('/entries/:id/update', function(req, res) {
-	Module.update({ '_id': req.params.id }, { $set: req.body }, function(err, module) {
-		if(!err) {
-	  		res.json({
-	  			success: true,
-	  			module: module
-	  		});
-	  	} else {
-	  		res.json({
-	  			success: false,
-	  			errors: err
-	  		})
-	  	}
+// Update Module
+router.put('/entries/:id', (req, res) => {
+	const { id } = req.params
+	const newModule = req.body;
+	const token = req.headers['authorization'] || false;
+
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if(!err && decoded.userID) {
+			Module.update({'_id': id}, {$set: newModule}, {upsert: true, safe: true}, (err, updatedModule) => {
+				if(!err && updatedModule) {
+		  		return res.status(200)
+		  		.json(success('Модуль успешно обновлён', {
+		  			updatedModule
+		  		}))
+		  	} else {
+		  		return res.status(500)
+					.json(error(err, 'Ошибка при обновлении модуля'))
+		  	}
+			})
+		} else {
+			return res.status(401)
+			.json(error(err, 'Неверный токен'))
+		}
 	})
 })
 

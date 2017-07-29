@@ -1,27 +1,19 @@
-module.exports = {
-	add: function(inputs) {
-		var errors = []
-		if (!inputs.slug) {
-			errors.push('Не заполнено поле "Системное имя"')
+export function create(values) {
+	var errors = []
+	if (!values.slug) {
+		errors.push('Не заполнено поле "Системное имя"')
+	}
+	if (!values.title) {
+		errors.push('Не заполнено поле "Заголовок"')
+	}
+	if (errors.length > 0) {
+		return {
+			success: false,
+			errors: errors
 		}
-
-		if (!inputs.pageTitle) {
-			errors.push('Не заполнено поле "Заголовок"')
+	} else {
+		return {
+			success: true
 		}
-
-		if (!inputs.pageDescription) {
-			errors.push('Не заполнено поле "Описание"')
-		}
-		if (errors.length > 0) {
-			return {
-				success: false,
-				errors: errors
-			}
-		} else {
-			return {
-				success: true
-			}
-		}
-
 	}
 }

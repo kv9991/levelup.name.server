@@ -8,9 +8,9 @@ var config = require('../config');
 
 router.get('/entries', function(req, res) {
 	var querystr = req.query.query
-	Post.find({$text: {$search: querystr}, 'postType': 'post'}, function(err, posts) {
-		User.find({$text: {$search: querystr}}, function(err, users) {
-			Blog.find({$text: {$search: querystr}}, function(err, blogs) {
+	Post.find({$text: {$search: querystr}, 'type': 'post'}, (err, posts) => {
+		User.find({$text: {$search: querystr}}, (err, users) => {
+			Blog.find({$text: {$search: querystr}}, (err, blogs) => {
 				res.json({
 					posts: posts,
 					users: users,
@@ -24,9 +24,7 @@ router.get('/entries', function(req, res) {
 router.get('/entries/tags', function(req, res) {
 	var querystr = req.query.query
 	Tag.find({$text: {$search: querystr}} , function(err, tags) {
-		res.json({
-			tags: tags
-		})
+		res.json(tags)
 	})
 });  
 

@@ -17,6 +17,12 @@
     "jsonwebtoken": "^7.4.0",
     "mkdirp": "^0.5.1",
     "mongoose": "^4.9.6",
-    "morgan": "^1.8.1",
+    "morgan": "^1.8.1"
+  },
+  "devDependencies": {
+    "babel-core": "^6.25.0",
+    "babel-plugin-transform-es2015-modules-commonjs": "^6.24.1",
+    "babel-plugin-transform-object-rest-spread": "^6.23.0",
+    "babel-register": "^6.24.1"
   }
 }

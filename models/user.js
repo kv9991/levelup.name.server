@@ -2,30 +2,96 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var userSchema = new Schema({ 
-    slug: String, 
-    userDescription: String,
-    userName: String,
-    userEmail: String,
-    userGender: String,
-    userRole: String,
-    userImage: String,
-    userPassword: {type: String, default: ''},
-    userCompany: String,
-    userDescription: String,
-    userBio: String,
-    userScore: {type: Number, default: 0},
-    userSocials: { type : Array , "default" : [] }, // Добавить каждой соц сети уникальный id
-    userSubscribersCount: { type: Number, default: 0 },
-    userSubscriptions: { users: Array, tags: Array, blogs: Array },
-    created: { type: Date, default: Date.now }
+  slug: {
+    type: String,
+    required: true
+  },  
+  description: {
+    type: String,
+    default: null
+  }, 
+  fullName: {
+    type: String,
+    default: null
+  },
+  email: {
+    type: String,
+    required: true
+  }, 
+  gender: {
+    type: String
+  }, 
+  role: { 
+    type: String,
+    default: 'user'
+  },
+  image: {
+    type: String,
+    default: null
+  }, 
+  password: {
+    type: String, 
+    required: true
+  },
+  company: {
+    type: String,
+    default: null
+  },
+  bio: {
+    type: String,
+    default: null
+  }, 
+  score: {
+    type: Number, 
+    default: 0
+  },
+  rate: {
+    type: Number,
+    default: 0
+  },
+  socials: [{ 
+    type: Schema.Types.ObjectId,
+    ref: 'Social',
+    default : [] 
+  }],
+  subscriptions: {
+    users: [{
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: [] 
+    }],
+    blogs: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Blog',
+      default: [] 
+    }],
+    tags: [{
+      type: Schema.Types.ObjectId,
+      ref: 'Tag',
+      default: [] 
+    }]
+  },
+  pocket: {
+    type: Number,
+    default: 0
+  },
+  updated: { 
+    type: Date, 
+    default: Date.now 
+  },
+  subscribers: [{
+    type: Schema.Types.ObjectId,
+    ref: 'User',
+    default: []
+  }]
 });
 
 userSchema.index({
-    'userName': 'text', 
-    'userDescription': 'text', 
-    'slug': 'text',
-    'userBio': 'text',
-    'userDescription': 'text'
+  'fullName': 'text', 
+  'description': 'text', 
+  'slug': 'text',
+  'bio': 'text',
+  'description': 'text'
 });
 
 var User = mongoose.model('User', userSchema)

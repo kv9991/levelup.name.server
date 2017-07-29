@@ -1,121 +1,118 @@
-var express = require('express')
-var router = express.Router()
-var getValidate = require('../validation/comment.js')
-var jwt = require('jsonwebtoken')
-var config = require('../config'); 
+import express from 'express'
+import getValidate from '../validation/comment.js'
+import jwt from 'jsonwebtoken'
+import config from '../config'
+import Post from '../models/post'
+import Comment from '../models/comment'
+import User from '../models/user'
+import { success, error } from '../utils/response.js'
 
-var Post = require('../models/post')
-var Comment = require('../models/comment')
-var User = require('../models/user')
+let router = express.Router()
 
-router.get('/entries', function(req, res) {
-  Comment.find({}, function(err, entries) {
-    res.json(entries);
-  });
+// Get Comments
+router.get('/entries', (req, res) => {
+  const { skip, limit } = req.query
+	Comment.find({}, {}, {
+		skip: +skip || 0, 
+		limit: +limit || 10, 
+		sort: { 
+			updated: -1
+		}
+	}, (err, comments) => {
+		if(!err && comments.length > 0) {
+			return res.status(200)
+			.json(comments)
+		} else {
+			return res.status(500)
+			.json(error(err, 'Ошибка при поиске комментариев'))
+		}
+	})
 });   
 
-router.post('/entries/add', function (req, res) {
-	var token = req.headers['authorization'] || false;
-	jwt.verify(token, config.secret, function(err, decoded) {
-		if (!err) {
-			var inputs = req.body;
-			var postID = inputs.commentPost;
-			Comment.create(inputs, function (err, comment) {
-			  	if (err) return console.log(err);
-			  	Post.update({'_id' : postID}, {$push: { 'postComments': comment._id }}, {safe: true, upsert: true})
-			  	.exec(function(err, post) {
-			  		res.json({ 
-				    	success: true,
-				    	message: 'Комментарий успешно добавлен',
-				    	comment: comment,
-				    	post: post
-				   });
+// Create Comment
+router.post('/entries/', (req, res) => {
+	const { content, author, post } = req.body;
+	const comment = { content, author, post };
+	const token = req.headers['authorization'] || false;
+
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if (!err && decoded.userID) {
+			Comment.create(comment, (err, createdComment) => {
+		  	if (!err) {
+			  	Post.update({'_id' : post}, {$push: { 'comments': createdComment._id }}, {safe: true, upsert: true})
+			  	.exec((err, post) => {
+			  		Comment.populate(createdComment, {path: 'author', model: 'User'}, (err, comment) => {
+					    res.status(200)
+			    		.json(success('Комментарий успешно добавлен', {
+			    			comment
+			    		}))
+					  });
 			  	})
-		  	})	
+			  } else {
+			  	return res.status(500)
+			  	.json(error(err, 'Ошибка при создании комментария'))
+			  }
+	  	})	
 		} else {
-			res.json({
-				success: false,
-				message: 'Неверный токен'
-			})
+			return res.status(401)
+			.json(error(err, 'Неверный токен'))
 		}
 	})
 });
 
-router.get('/entries/:id', function(req, res) {
-	Comment.find({'commentPost': req.params.id})
-	.populate('commentAuthor')
-	.exec(function(err, comment) {
-	    res.json(comment);
-	});
-})
+router.delete('/entries/:id', (req, res) => {
+	const token = req.headers['authorization'] || false;
+	const { id } = req.params
 
-router.get('/entries/:id/remove', function(req, res) {
-	var token = req.headers['authorization'] || false;
-	var id = req.params.id;
-	jwt.verify(token, config.secret, function(err, decoded) {
-		if(err) { 
-			return res.json({
-				success: false,
-				message: 'Неверный токен'
-			})
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if(err && !decoded.userID) { 
+			return res.status(401)
+			.json(error(err, 'Неверный токен'))
 		} else {
-			Comment.findOne({'_id' : id}, function(err, comment) {
-				if(comment) {
-					User.findOne({'_id' : decoded.userID}, function(err, user) {
-						if (user._id == comment.commentAuthor) {
-							Comment.remove({'_id' : id}, function(err, mongodb) {
-								res.json({
-									success: true,
-									message: 'Комментарий удалён!',
-									mongodb: mongodb
-								})
-							})
-						} else {
-							res.json({
-								success: false,
-								message: 'Недостаточно прав для удаления!'
-							})
-						}
-					})
+			Comment.findOne({'_id' : id}, (err, comment) => {
+				if(!err && comment) {
+					if (decoded.userID.toString() == comment.author.toString()) {
+						Comment.remove({'_id' : id}, (err, mongodb) => {
+							return res.status(200)
+							.json(success('Комментарий удалён', {
+								mongodb
+							}))
+						})
+					} else {
+						return res.status(401)
+						.json(error(err, 'Недостаточно прав для удаления'))
+					}
 				} else {
-					return res.json({
-						success: false,
-						message: 'Комментарий не найден!'
-					})
+					return res.status(404)
+					.json(error(err, 'Комментарий не найден'))
 				}
 			})
 		}
 	})
 })
 
-router.post('/entries/:id/update', function(req, res) {
-	var token = req.headers['authorization'] || false;
-	var inputs = req.body;
-	var id = req.params.id;
-	jwt.verify(token, config.secret, function(err, decoded) {
-		if(err) { 
-			return res.json({
-				success: false,
-				message: 'Неверный токен'
-			})
+router.put('/entries/:id', (req, res) => {
+	const token = req.headers['authorization'] || false;
+	const newComment = req.body;
+	const { id } = req.params;
+
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if(err && !decoded.userID) { 
+			return res.status(401)
+			.json(error(err, 'Неверный токен'))
 		} else {
-			Comment.findOne({'_id' : id}, function(err, comment) {
-				User.findOne({'_id' : decoded.userID}, function(err, user) {
-					if (user._id == comment.commentAuthor) {
-						Comment.update({'_id' : id}, {$set: inputs}, {safe: true, upsert: false}, function(err, updatedComment) {
-							res.json({
-								success: true,
-								message: 'Комментарий обновлён!',
-								comment: updatedComment
-							})
-						})
-					} else {
-						res.json({
-							success: false,
-							message: 'Недостаточно прав для удаления!'
-						})
-					}
-				})
+			Comment.findOne({'_id' : id}, (err, comment) => {
+				if (decoded.userID == comment.author) {
+					Comment.update({'_id' : id}, {$set: newComment}, {safe: true, upsert: false}, (err, updatedComment) => {
+						return res.status(200)
+						.json(success('Комментарий обновлён', {
+							comment: updatedComment
+						}))
+					})
+				} else {
+					return res.status(401)
+					.json(error(err, 'Недостаточно прав'))
+				}
 			})
 		}
 	})

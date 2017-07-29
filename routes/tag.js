@@ -33,17 +33,19 @@ router.get('/entries/:slug', function(req, res) {
 
 router.get('/entries/:id/byuser', function(req, res) {
 	User.findOne({'_id': req.params.id}, function(err, user) {
-		Tag.find({'_id' : {$in: user.userSubscriptions.tags}}, function(err, tags) {
+		Tag.find({'_id' : {$in: user.subscriptions.tags}}, function(err, tags) {
 			res.json(tags)
 		})
 	})
 })
 
 router.get('/entries/:id/getsubscribers', function(req, res) {
-	User.find({'userSubscriptions.tags': req.params.id}, function(err, users) {
+	User.find({'subscriptions.tags': req.params.id}, function(err, users) {
 		res.json(users)
 	})
 })
+
+
 
 router.get('/:id/subscribe', function(req, res) {
 	var token = req.headers['authorization'] || false;
@@ -51,8 +53,8 @@ router.get('/:id/subscribe', function(req, res) {
 	if(token) {
 		User.findOne({ '_id': decoded.userID }, function(err, user) {
 
-			if(user.userSubscriptions.tags.indexOf(req.params.id) == -1) {
-				User.findOneAndUpdate({ '_id': decoded.userID }, {$push : {'userSubscriptions.tags' : req.params.id}}, { safe: true, upsert: true })
+			if(user.subscriptions.tags.indexOf(req.params.id) == -1) {
+				User.findOneAndUpdate({ '_id': decoded.userID }, {$push : {'subscriptions.tags' : req.params.id}}, { safe: true, upsert: true })
 				.exec(function(err, pages) {
 					if(!err) {
 				  		Tag.findByIdAndUpdate(req.params.id, {$inc: { 'tagSubscribersCount': 1 }}, {upsert: true}, function(err, tag) {
@@ -71,7 +73,7 @@ router.get('/:id/subscribe', function(req, res) {
 				  	}
 				})
 			} else {
-				User.findOneAndUpdate({ '_id': decoded.userID }, {$pull : {'userSubscriptions.tags' : req.params.id}})
+				User.findOneAndUpdate({ '_id': decoded.userID }, {$pull : {'subscriptions.tags' : req.params.id}})
 				.exec(function(err, pages) {
 					if(!err) {
 				  		Tag.findByIdAndUpdate(req.params.id, {$inc: { 'tagSubscribersCount': -1 }}, {upsert: true}, function(err, tag) {

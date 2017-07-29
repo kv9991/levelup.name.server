@@ -1,58 +1,72 @@
-var express = require('express')
-var router = express.Router()
-var Post = require('../models/post')
-var Tag  = require('../models/tag')
-var jwt = require('jsonwebtoken')
-var config = require('../config'); 
-var createSlug = require('../utils/createSlug.js')
-var validation = require('../validation/post')
-var formidable = require('formidable')
-var util = require('util')
-var path = require('path')
-var fs = require('fs')
-var randomString = require('../utils/randomString.js')
-var getExtension = require('../utils/getExtension.js')
-var User = require('../models/user.js')
-var mongoose = require('mongoose')
+import express from 'express'
+import Post from '../models/post'
+import Tag from '../models/tag'
+import User from '../models/user'
+import Campaign from '../models/campaign'
+import jwt from 'jsonwebtoken'
+import config from '../config'
+import createSlug from '../utils/createSlug.js'
+import validation from '../validation/post'
+import mongoose from 'mongoose'
+import { success, error } from '../utils/response.js'
 
+let router = express.Router()
 
-router.get('/entries', function(req, res) {
-	var options = req.query;
-	var query = { skip: req.query.skip || 0, limit: req.query.limit || 10 }
-	var token = req.headers['authorization'] || false;
+// Get Entries
+router.get('/entries', (req, res) => {
+	var { limit, skip, userID, type, status, blogID } = req.query
+	const token = req.headers['authorization'] || false;
+
 	var query = {};
-	if(options.userID) { query['postAuthor.authorID'] = options.userID }
-	if(options.type) { query['postType'] = { $in : options.type } }
-	if(options.status) { query['postStatus'] = { $in : options.status } }
-	if(options.blogID) { query['postAuthor.authorID'] = options.blogID }
-	if(!options.perPage) { options.perPage = 10 }
+	if(userID) { 
+		query['author.user'] = userID
+	}
+	if(type) { 
+		query['type'] = { 
+			$in : type
+		}
+	}
+	if(status) {
+		query['status'] = {
+			$in : status
+		}
+	}
+	if(blogID) {
+		query['author.blog'] = blogID
+	}
 
 	Post.find(query, {}, {
-		skip: +options.skip, 
-		limit: +options.perPage, 
-		sort:{ updated: -1 }
+		skip: +skip, 
+		limit: +limit || 10, 
+		sort: { updated: -1 }
 	})
-	.populate({
-	  	path: 'postComments',
-	  	options: {
-		   sort: { commentDate: 1 }
-	  	}
+	.populate([{
+		path: 'author.user',
+		model: 'User'
+	}, {
+		path: 'author.blog',
+		model: 'Blog'
+	}, {
+  	path: 'comments',
+  	options: {
+		  sort: { updated: 1 }
+	  }
+	}])
+	.exec((err, results) => {
+    var options = {
+      path: 'comments.author',
+      model: 'User',
+      select: 'image fullName slug description'
+    };
+
+    if (err) return res.json(500);
+    Post.populate(results, options, (err, posts) => {
+      res.json(posts);
+    });
 	})
-	.exec(function(err, results) {
-	    var options = {
-	      path: 'postComments.commentAuthor',
-	      model: 'User',
-	      select: 'userImage userName slug userDescription'
-	    };
+});   
 
-	    if (err) return res.json(500);
-	    Post.populate(results, options, function (err, posts) {
-	      res.json(posts);
-	    });
-	})
-});  
-
-
+// Get Personal Feed
 router.get('/entries/personal', function(req, res) {
 	var query = { skip: req.query.skip || 0, limit: req.query.limit || 10 }
 	var token = req.headers['authorization'] || false;
@@ -70,7 +84,7 @@ router.get('/entries/personal', function(req, res) {
 				})
 			})
 		} else {
-			Post.find({'postType': 'post', 'postStatus': 'published'}, null, {
+			Post.find({'type': 'post', 'status': 'published'}, null, {
 			   skip: +query.skip, 
 			   limit: +query.limit, 
 			   sort:{ updated: -1 }
@@ -87,72 +101,73 @@ router.get('/popular', function(req, res) {
 		skip: req.query.skip || 0, 
 		limit: req.query.limit || 10 
 	}
-  	Post.find({'postType': 'post'}, {}, {
+  	Post.find({'type': 'post'}, {}, {
 	    skip: + query.skip, 
 	    limit: + query.limit, 
 	    sort:{ updated: -1 }
 	},
-	function(err, entries) {
+	(err, entries) => {
 		res.json(entries);
 	});
 });   
 
-router.post('/add', function (req, res) {
-	var inputs = req.body;
-	var validate = validation.add(inputs);
-	if (validate.success) {
-		if(inputs.postType == 'post') {
-			Post.create(inputs, function (err, post) {
-			  if (err) { return console.log(err) 
-			  	} else {
-			  	inputs.postTags.forEach(function(item) {
-			  		Tag.findOne({'tagTitle' : item}, function(err, tag) {
-			  			if(tag == null) { Tag.create({
-			  					slug: createSlug(item),
-					  			tagTitle: item
-					  		})
-			  			}
-			  		})
-			  	})
-			  	res.json({ 
-			    	success: true,
-			    	message: 'Пост успешно опубликован',
-			    	post: post
-			    });
-			  }
-			})
-		} else {
-			Post.create(inputs, function(err, post) {
-				res.json({
-					success: true,
-					message: 'Пост успешно опубликован',
-					post: post
-				})
+// Create
+router.post('/entries', (req, res) => {
+	const token = req.headers['authorization'] || false;
+	const { title, content, author, video, image, link, tags, status, type, slug } = req.body;
+	const post = { title, content, author, video, image, link, tags, status, type, slug }
+	const validate = validation.add(post);
+
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if(!err && decoded) {
+			Post.create(post, (err, createdPost) => {
+				if(!err && createdPost) {
+					//response
+					var populationQuery = [
+						{ path: 'author.blog' }, 
+						{ path: 'author.user' }
+					]
+				  
+				  Post.populate(createdPost, populationQuery, (err, user) => {
+				    res.status(200)
+		    		.json(success('Пост успешно опубликован', {
+		    			post: createdPost
+		    		}))
+				  });
+	    		// create tags
+					tags.forEach((title, i) => {
+						Tag.findOne({title}, (err, tag) => {
+							if(err && !tag) { Tag.create({
+								slug: createSlug(item),
+								title
+							})} 
+						})
+					})
+				} else {
+					// handle errors
+					res.status(200)
+	    		.json(error(err, 'Произошла ошибка при публикации'))
+				}
 			})
 		}
-	} else {
-		res.json({ 
-	    	success: false,
-	    	errors: validate.errors
-	    });
-	}
+	})
 });
 
 
 router.get('/entries/:slug', function(req, res) {
 	Post.findOne({'slug': req.params.slug})
-	.populate('postLikes')
-	.populate('postComments')
+	.populate('likes comments')
+	.populate('author.blog')
+	.populate('author.user')
 	.exec(function(err, results) {
 	    var options = {
-	      path: 'postComments.commentAuthor',
+	      path: 'comments.author',
 	      model: 'User',
-	      select: 'userImage userName slug userDescription'
+	      select: 'image fullName slug description'
 	    };
 
 	    if (err) return res.json(500);
 	    Post.populate(results, options, function (err, posts) {
-	    	console.log(posts)
 	      res.json(posts);
 	    });
 	})
@@ -160,7 +175,7 @@ router.get('/entries/:slug', function(req, res) {
 
 router.get('/entries/:id/byid', function(req, res) {
 	Post.findOne({'_id': req.params.id})
-	.populate('postLikes')
+	.populate('likes')
 	.exec(function(err, post) {
 		if(!err) {
 	    	res.json(post);
@@ -185,58 +200,6 @@ router.get('/entries/:id/remove', function(req, res) {
 			})
 		}
 	})
-})
-
-router.post('/upload', function (req, res) {
-	var filename, dir, id;
-
-	// Инициализируем парсер
-	var form = new formidable.IncomingForm();
-	form.parse(req)
-	form.multiples = false;
-	form.uploadDir = path.join(process.cwd(), '/uploads')
-	form.keepExtensions = true;
-
-	// Парсим storage-id поста
-	form.on('field', function(field, value) {
-		if (field == 'storage') {
-			id = value
-		}
-    });
-	
-	// Парсим файл и переименовываем его
-	form.on('file', function(field, file) {
-		filename = randomString(16) + getExtension(file.type);
-		dir = form.uploadDir + '/posts/' + id + '/';
-		if (!fs.existsSync(dir)){
-		    fs.mkdirSync(dir);
-		}
-        fs.rename(file.path, dir + '/' + filename);
-    });
-
-	// Обрабатываем ошибки парсера
-    form.on('error', function(err) {
-		console.log('Ошибка при загрузке файла: \n' + err);
-	});
-
-    // Кидаем ответ после парсинга
-    form.on('end', function(err, fields, files) {
-    	if (!err) {
-			res.json({
-				filename: filename,
-				success: true
-			})
-		} else {
-			res.json({
-				success: false,
-				errors: err
-			})
-		}
-	});
-})
-
-router.get('/entries/removeblanks', function(req, res) {
-	Post.remove({postTitle: 'Безымянный'}).exec()
 })
 
 router.post('/entries/:id/update', function(req, res) {
@@ -269,41 +232,39 @@ router.post('/entries/:id/update', function(req, res) {
 	})
 })
 
-
 router.get('/entries/:id/like', function(req, res) {
 	var postID = req.params.id;
 	var token = req.headers['authorization'] || false;
-	var decoded = jwt.verify(token, config.secret, function(err, decoded) {
+	jwt.verify(token, config.secret, function(err, decoded) {
 		if(!err) {
 			Post.findOne({ '_id': postID }, function(err, post) {
-				console.log(err)
-				if(post.postLikes.indexOf(decoded.userID) == -1) {
-					Post.update({ '_id': postID }, { $push: { 'postLikes': decoded.userID }}, {safe: true, upsert: true})
+				if(post.likes.indexOf(decoded.userID) == -1) {
+					Post.update({ '_id': postID }, { $push: { 'likes': decoded.userID }}, {safe: true, upsert: true})
 					.exec(function(err) {
 						if(!err) {
-					  		res.json({
+					  		return res.json({
 					  			success: true,
 					  			message: 'Лайк поставлен',
-					  			counter: post.postLikes.length + 1
+					  			counter: post.likes.length + 1
 					  		});
 					  	} else {
-					  		res.json({
+					  		return res.json({
 					  			success: false,
 					  			errors: err
 					  		})
 					  	}
 					})
 				} else {
-					Post.update({ '_id': postID }, { $pull: { 'postLikes': decoded.userID }})
+					Post.update({ '_id': postID }, { $pull: { 'likes': decoded.userID }})
 					.exec(function(err) {
 						if(!err) {
-					  		res.json({
+					  		return res.json({
 					  			success: true,
 					  			message: 'Лайк удалён',
-					  			counter: post.postLikes.length - 1
+					  			counter: post.likes.length - 1
 					  		});
 					  	} else {
-					  		res.json({
+					  		return res.json({
 					  			success: false,
 					  			errors: err
 					  		})
@@ -312,7 +273,7 @@ router.get('/entries/:id/like', function(req, res) {
 				}
 			});
 		} else {
-			res.json({
+			return res.json({
 				success: false,
 				message: 'Неверный токен'
 			})
@@ -322,19 +283,47 @@ router.get('/entries/:id/like', function(req, res) {
 
 router.get('/entries/:id/wholikes', function(req, res) {
 	Post.findOne({'_id' : req.params.id}, function(err, post) {
-		User.find({'_id' : { $in : post.postLikes }} , function(err, users) {
+		User.find({'_id' : { $in : post.likes }} , function(err, users) {
 			res.json(users)
 		})
 	})
 })
 
 // Обновление одного поля (Работает совместно с глобальным методом updateField())
-router.post('/entries/:id/updatefield', function (req, res) {
-	data = req.body;
-	Post.update({'_id' : req.params.id}, {[data.field] : data.value}, function(err) {
-		if(!err) return res.json({ success: true })
-		res.json(err)
+router.put('/entries/:id/field', (req, res) => {
+	const { id } = req.params
+	const { value, field } = req.body;
+	Post.update({'_id' : id}, {[field] : value}, (err, blog) => {
+		if(!err && blog) {
+			return res.status(200)
+			.json(success('Поле успешно обновлено', {
+				blog
+			}))
+		} else {
+			return res.status(500)
+			.json(error(err, 'Ошибка при обновлении поля'))
+		} 
 	})
+});
+
+router.get('/entries/:id/adv', (req, res) => {
+	const { id } = req.params;
+
+	Post.findOne({'_id': id}, (err, post) => {
+		Campaign.find({'placements.users' : {$in : [post.author.user]}})
+		.populate('advertisements')
+		.exec((err, campaigns) => {
+			let randomCampaign = Math.floor(Math.random() * campaigns.length)
+			let randomAdv = Math.floor(Math.random() * campaigns[randomCampaign].advertisements.length);
+			if(!err && campaigns) {
+				return res.status(200)
+				.json(campaigns[randomCampaign].advertisements[randomAdv])
+			} else {
+				return res.status(500)
+				.json(error(err, 'Кампания не найдена'))
+			} 
+		})
+	}) 
 });
 
 

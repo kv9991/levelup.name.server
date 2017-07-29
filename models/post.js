@@ -2,30 +2,83 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var postSchema = new Schema({ 
-    slug: String, 
-    storage: String,
-    postTitle: String,
-    postType: {type: String, default: 'post'},
-    postDescription: String,
-    postContent: String,
-    postAuthor: {authorType: {type: String, default: 'user'}, authorID: {type: String, ref: 'User'}},
-    postTags: [{type: String, default: []}],
-    postLikes: [{type: String, ref: 'User', default: []}],
-    postFavorites: Array,
-    postImage: String,
-    postComments: [{type: String, ref: 'Comment', default: []}],
-    postCommentsCount: {type: Number, default : 0},
-    postVideo: {type: String, default: null},
-    postLink: {type: String, default: null},
-    postStatus: {type: String, default: 'draft'},
-    updated: { type: Date, default: Date.now }
+  slug: { 
+    type: String,
+    default: null
+  }, 
+  title: {
+    type: String,
+    default: null
+  },
+  type: { 
+    type: String, 
+    default: 'post',
+    required: true
+  },
+  description: { 
+    type: String,
+    default: null
+  },
+  content: { 
+    type: String
+  },
+  author: { 
+    blog: {
+      type: Schema.Types.ObjectId,
+      ref: 'Blog',
+      default: null
+    }, 
+    user: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    }
+  },
+  tags: [{
+    type: String, 
+    default: []
+  }],
+  likes: [{
+    type: String, 
+    ref: 'User',
+    default: []
+  }],
+  image: { 
+    type: String,
+    default: null
+  },
+  comments: [{
+    type: String, 
+    ref: 'Comment', 
+    default: []
+  }],
+  video: {
+    type: String, 
+    default: null
+  },
+  link: {
+    type: String, 
+    default: null
+  },
+  status: {
+    type: String, 
+    default: 'draft'
+  },
+  views: {
+    type: Number,
+    default: 0
+  },
+  updated: { 
+    type: Date, 
+    default: Date.now 
+  }
 });
 
 postSchema.index({
-    'postTitle': 'text', 
-    'postDescription': 'text', 
-    'postContent': 'text',
-    'postTags': 'text'
+  'title': 'text', 
+  'description': 'text', 
+  'content': 'text',
+  'tags': 'text'
 });
 
 var Post = mongoose.model('Post', postSchema)

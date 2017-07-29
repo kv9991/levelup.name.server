@@ -1,6 +1,5 @@
 module.exports = function(inputs) {
 	var errors = []
-	console.log(inputs)
 	if (!inputs.commentContent) {
 		errors.push('Не заполнено поле "Комментарий"')
 	}

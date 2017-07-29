@@ -2,18 +2,32 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var tagSchema = new Schema({ 
-    slug: String, 
-    tagTitle: String,
-    tagDescription: String,
-    tagImage: String,
-    tagSubscribersCount: { type: Number, default: 0 },
-    created: { type: Date,default: Date.now }
+  slug: {
+  	type: String,
+  	required: true
+  }, 
+  title: {
+  	type: String,
+  	required: true
+  },
+  description: { 
+  	type: String,
+  	default: null
+  }, 
+  image: {
+  	type: String,
+  	default: null
+  }, 
+  updated: { 
+  	type: Date,
+  	default: Date.now 
+  }
 });
 
 tagSchema.index({
-    'tagTitle': 'text', 
-    'tagDescription': 'text', 
-    'slug': 'text'
+  'title': 'text', 
+  'description': 'text', 
+  'slug': 'text'
 });
 
 var Tag = mongoose.model('Tag', tagSchema)

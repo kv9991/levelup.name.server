@@ -2,21 +2,56 @@ var mongoose = require('mongoose');
 var Schema = mongoose.Schema;
 
 var blogSchema = new Schema({ 
-    slug: { type: String }, 
-    blogTitle: { type: String },
-    blogDescription: { type: String },
-    blogOwner: { type: String },
-    blogStaff: { type: Array, default: [] },
-    blogTags: Array,
-    blogLikes: Array,
-    blogImage: String,
-    blogSubscribersCount: {type: Number, default: 0 },
-    created: { type: Date, default: Date.now }
+  slug: { 
+    type: String,
+    required: true
+  }, 
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    default: null
+  },
+  owner: {
+    type: String,
+    required: true
+  },
+  staff: {
+    type: Array, 
+    default: []
+  },
+  tags: { 
+    type: Array,
+    default: []
+  },
+  posts: [{
+    type: Schema.Types.ObjectId,
+    default: [],
+    ref: 'Post'
+  }],
+  image: {
+    type: String,
+    default: null
+  },
+  subscribers: {
+    type: Number, 
+    default: 0
+  },
+  created: {
+    type: Date,
+    default: Date.now
+  }
 });
 
-blogSchema.index({'blogTitle': 'text', 'blogTags': 'text', 'blogDescription': 'text'});
-var Blog = mongoose.model('Blog', blogSchema)
+blogSchema.index({
+  'title': 'text', 
+  'tags': 'text', 
+  'description': 'text'
+});
 
+var Blog = mongoose.model('Blog', blogSchema)
 module.exports = Blog
 
 

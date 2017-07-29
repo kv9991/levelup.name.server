@@ -5,20 +5,14 @@ var Comment = require('../models/comment')
 var User = require('../models/user')
 var Post = require('../models/post')
 var Blog = require('../models/blog')
+import Campaign from '../models/campaign.js'
 var jwt = require('jsonwebtoken')
 var config = require('../config'); 
 var validation = require('../validation/user')
-
-// for uploading images
-var formidable = require('formidable')
-var util = require('util')
-var path = require('path')
-var fs = require('fs')
-var randomString = require('../utils/randomString.js')
-var getExtension = require('../utils/getExtension.js')
+import { success, error } from '../utils/response.js';
 
 router.get('/entries', function(req, res) {
-  	var options = req.body;
+  var options = req.body;
 	var query = {};
 	User.find(query, {}, {
 		skip: options.skip, 
@@ -30,96 +24,113 @@ router.get('/entries', function(req, res) {
 });   
 
 // Проверяет токен
-router.get('/auth', function(req, res) {
-	var token = req.headers['authorization'] || false;
-	decoded = jwt.verify(token, config.secret, function(err, decoded) {
+router.get('/auth', (req, res) => {
+	const token = req.headers['authorization'] || false;
+	jwt.verify(token, config.secret, (err, decoded) => {
 		if(!err) {
-		    User.findOne({_id : decoded.userID}, function(err, user) {
-		    	res.json(user);
-		    })
+	    User.findOne({_id : decoded.userID}, (err, user) => {
+	    	res.status(200)
+	    	.json(success('Пользователь авторизован', {
+	    		user
+	    	}))
+	    })
 		} else {
-			res.json(false);
+			res.status(200)
+	    .json(error(err, 'Авторизация прошла неудачно'))
 		}
 	})
 })
 
 // Выдает токен при авторизации
 router.post('/signin', function(req, res) {
-  	User.findOne({
-    	'slug': req.body.userLogin
-  	}, function(err, user) {
-    	if (!user) {
-      	res.json({ success: false, message: 'Пользователь не найден' });
-    	} else {
-	      if (user.userPassword != req.body.userPassword) {
-	        res.json({ success: false, message: 'Пароль неверный' });
-	      } else {
-	      	// Создаём токен
-	        	var token = jwt.sign({ userID: user._id }, config.secret, {
-	          	expiresIn : 60*60*24*3
-	        	});
-	        	User.findOne({slug: user.slug}, function(err, user) {
-		        	if (!err) {
-		        		// Отправляем токен и информацию о юзере
-		        		res.json({
-				        	success: true,
-				        	token: token,
-				        	user: user
-				      });
-		        	} else {
-		        		res.json({
-		        			success: false,
-		        			errors: err
-		        		})
-		        	}
-	        })  
-	      }   
-	   }
-  	});
+	const { login, password } = req.body;
+	User.findOne({'slug': login}, (err, user) => {
+  	if (!user) {
+  		res.status(200)
+  		.json(error(err, 'Пользователь не найден'))
+  	} else {
+      if (user.password != password) {
+        res.status(200)
+    		.json(error(err, 'Неверный пароль'))
+      } else {
+      	var token = jwt.sign({ userID: user._id }, config.secret, {
+        	expiresIn : 60*60*24*3
+      	});
+      	User.findOne({slug: user.slug}, function(err, user) {
+        	if (!err) {
+		      	res.status(200)
+    				.json(success('Авторизация прошла успешно', {
+    					token,
+    					user
+    				}))
+        	} else {
+        		res.status(200)
+    				.json(error(err, 'Пользователь не найден'))
+        	}
+        })  
+      }   
+   	}
+  });
 });
 
 // Выдает токен при авторизации
 router.post('/signup', function(req, res) {
-  	var data = req.body;
+  var data = req.body;
 	var valid = validation.signup(data);
 	if (valid.success) {
 		var user = {
-			slug: data.userLogin,
-			userName: data.userName,
-		   userEmail: data.userEmail,
-		   userGender: data.userGender,
-		   userPassword: data.userPassword,
-		   userDescription: data.userDescription
+			slug: data.login,
+			fullName: data.fullName,
+		  email: data.email,
+		  gender: data.gender,
+		  password: data.password,
+		  description: data.description
 		}	
-		User.create(user, function (err) {
+		User.create(user, (err) => {
 			if(!err) {
-			  	return res.json({ 
-			    	success: true,
-			    	message: 'Регистрация прошла успешно!',
-			    	errors: []
-			   });
+			  	res.status(200)
+		    	.json(success('Регистрация прошла успешно'))
 			} else {
-				return res.json({ 
-			    	success: false,
-			    	message: 'Неизвестная ошибка',
-			    	errors: err
-			   });
+				res.status(200)
+	    	.json(error(err, 'Ошибка при создании пользователя'))
 			}
 		})
 	} else {
-		res.json({ 
-	    	success: false,
-	    	message: 'При регистрации возникли ошибки',
-	    	errors: valid.errors
-	    });
+		res.status(200)
+	  .json(error(valid.errors, 'При регистрации возникли ошибки'))
 	}
 });
 
 // Выдает пользователя по никнейму
 router.get('/entries/:nickname', function(req, res) {
-	User.findOne({'slug': req.params.nickname}, '-userPassword -__v', function(err, user) {
+	User.findOne({'slug': req.params.nickname}, '-userPassword -__v')
+	.populate('socials')
+	.exec(function(err, user) {
 		if(!err) {
 			res.json(user)
+		}
+	})
+})
+
+router.get('/me', (req, res) => {
+	const token = req.headers['authorization'] || false;
+
+	jwt.verify(token, config.secret, (err, decoded) => {
+		if(!err && decoded.userID) {
+			User.findOne({'_id': decoded.userID}, '-password -__v')
+			.populate('socials')
+			.exec((err, user) => {
+				if(!err && user) {
+					return res.status(200)
+					.json(user)
+				} else {
+					return res.status(404)
+					.json(error(err, 'Пользователь не найден'))
+				}
+			})
+		} else {
+			return res.status(401)
+			.json(error(err, 'Неверный токен'))
 		}
 	})
 })
@@ -178,85 +189,51 @@ router.post('/entries/:id/update', function(req, res) {
 })
 
 // Обновляет одно поле
-router.post('/entries/:id/updatefield', function (req, res) {
-	data = req.body;
-	User.update({'_id' : req.params.id}, {[data.field] : data.value}, function(err) {
-		if(!err) return res.json({ success: true })
-		res.json(err)
+router.put('/entries/:id/field', (req, res) => {
+	const { id } = req.params
+	const { value, field } = req.body;
+	User.update({'_id' : id}, {[field] : value}, (err, user) => {
+		if(!err && user) {
+			return res.status(200)
+			.json(success('Поле успешно обновлено', {
+				user
+			}))
+		} else {
+			return res.status(500)
+			.json(error(err, 'Ошибка при обновлении поля'))
+		} 
 	})
 });
 
-
-// Подписка на авторе. По токену определяется подписант
-router.get('/entries/:id/subscribe', function(req, res) {
-	var token = req.headers['authorization'] || false;
-	var decoded = jwt.verify(token, config.secret);
-	if(token) {
-		User.findOne({ '_id': decoded.userID }, function(err, user) {
-			if(user.userSubscriptions.users.indexOf(req.params.id) == -1) {
-				User.update({ '_id': decoded.userID }, {$push : {'userSubscriptions.users' : req.params.id}}, { safe: true, upsert: true })
-				.exec(function(err) {
-					if(!err) {
-						User.findByIdAndUpdate(req.params.id, {$inc: { 'userSubscribersCount': 1 }}, {upsert: true}, function(err, user) {
-				  			res.json({
-					  			success: true,
-					  			message: 'Подписка оформлена'
-					  		});
-				  		})
-				  	} else {
-				  		res.json({
-				  			success: false,
-				  			errors: err
-				  		})
-				  	}
-				})
+// Возвращает подписки пользователя (объекты пользователей)
+router.get('/entries/:id/subscriptions/:type?', function(req, res) {
+	if(req.params.type) {
+		const { id, type } = req.params
+		User.findById(id)
+		.populate('subscriptions.' + type)
+		.exec((err, user) => {
+			if(!err) {
+				return res.status(200)
+				.json(user.subscriptions[type])
 			} else {
-				User.update({ '_id': decoded.userID }, {$pull : {'userSubscriptions.users' : req.params.id}})
-				.exec(function(err, pages) {
-					if(!err) {
-				  		User.findByIdAndUpdate(req.params.id, {$inc: { 'userSubscribersCount': -1 }}, {upsert: true}, function(err, user) {
-				  			res.json({
-					  			success: true,
-					  			message: 'Подписка удалена'
-					  		});
-				  		})
-				  	} else {
-				  		res.json({
-				  			success: false,
-				  			errors: err
-				  		})
-				  	}
-				})
+				return res.status(404)
+				.json(error(err, 'Ошибка при поиске подписок'))
 			}
-		});
+		})
 	} else {
-		res.json({
-			success: false,
-			message: 'Неверный токен'
+		const { id } = req.params;
+		User.findById(id)
+		.populate('subscriptions.blogs subscriptions.users subscriptions.tags')
+		.exec((err, user) => {
+			if(!err) {
+				return res.status(200)
+				.json(user.subscriptions)
+			} else {
+				return res.status(404)
+				.json(error(err, 'Ошибка при поиске подписок'))
+			}
 		})
 	}
-})
-
-// Устарел (у router.post уже есть данный метод)
-// Возвращает посты пользователя
-router.get('/:id/posts', function(req, res) {
-	Post.find({'postAuthor': req.params.id}, {}, {
-	    skip:0, 
-	    limit:10, 
-	    sort:{ updated: -1 }
-	},
-	function(err, posts) {
-		res.json(posts);
-	});
-})
-
-// Возвращает подписки пользователя (объекты пользователей)
-router.get('/entries/:id/getsubscriptions', function(req, res) {
-	User.findById(req.params.id, function(err, user) {
-		User.find({'_id' : { $in : user.userSubscriptions.users }}, function(err, users) {
-			res.send(users)
-		})
-	})
 })
 
 // Добавляет соц сеть
@@ -267,15 +244,15 @@ router.post('/entries/:id/addsocial', function(req, res) {
 		// добавить проверку на токен
 		User.findOne({'_id': req.params.id}, function(err, user) {
 			var index = -1;
-			for(var i = 0, len = user.userSocials.length; i < len; i++) {
-			    if (user.userSocials[i].title === inputs.title) {
+			for(var i = 0, len = user.socials.length; i < len; i++) {
+			    if (user.socials[i].title === inputs.title) {
 			        index = i;
 			        break;
 			    }
 			}
 			if(index == -1) {
 				if(decoded.userID == req.params.id) {
-					User.findOneAndUpdate({'_id' : req.params.id}, {$push: {'userSocials' : { 'title': inputs.title, 'link': inputs.link} }}, {upsert:true, safe: true})
+					User.findOneAndUpdate({'_id' : req.params.id}, {$push: {'socials' : { 'title': inputs.title, 'link': inputs.link} }}, {upsert:true, safe: true})
 					.exec(function(err, pages) {
 						if(!err) {
 					  		res.json({
@@ -310,13 +287,13 @@ router.post('/entries/:id/removesocial', function(req, res) {
 		if(!err) { 
 			User.findOne({'_id' : req.params.id }, function(err, user) {
 				var index = -1;
-				for(var i = 0, len = user.userSocials.length; i < len; i++) {
+				for(var i = 0, len = user.socials.length; i < len; i++) {
 				    if (user.userSocials[i].title == social.title) {
 				        index = i;
 				        break;
 				    }
 				}
-				User.update({'_id' : req.params.id}, {$pull : {'userSocials': {'title' : social.title}}}, {upsert: true, safe: true}, function(err, response) {
+				User.update({'_id' : req.params.id}, {$pull : {'socials': {'title' : social.title}}}, {upsert: true, safe: true}, function(err, response) {
 					res.json({
 						success: true,
 						message: 'Удаление прошло успешно'
@@ -339,17 +316,17 @@ router.get('/entries/:id/getstats', function(req, res) {
 			if(err) { return res.json(err) }
 			var likes = 0;
 			posts.map((item) => {
-				item.postLikes.map((item) => {
+				item.likes.map((item) => {
 					likes++;
 				})
 			})
-			Comment.find({'commentAuthor': req.params.id}, function(err, comments) {
+			Comment.find({'author': req.params.id}, function(err, comments) {
 				res.json({
 					likes: likes,
 					posts: posts.length,
-					score: user.userScore,
+					score: user.score,
 					comments: comments.length,
-					subscribers: user.userSubscribersCount
+					subscribers: user.subscribers.length
 				})
 			})
 		})
@@ -358,7 +335,7 @@ router.get('/entries/:id/getstats', function(req, res) {
 
 // Возвращает блог пользователя
 router.get('/entries/:id/getblog', function(req, res) {
-	Blog.findOne({'blogOwner' : req.params.id}, function(err, blog) {
+	Blog.findOne({'owner' : req.params.id}, function(err, blog) {
 		if(!err) {
 			res.json(blog)
 		}
@@ -368,12 +345,81 @@ router.get('/entries/:id/getblog', function(req, res) {
 // Возвращает маски пользователя
 router.get('/entries/:id/getfaces', function(req, res) {
 	var result = [];
-	Blog.findOne({'blogOwner' : req.params.id}, function(err, blog) {
+	Blog.findOne({'owner' : req.params.id}, function(err, blog) {
 		result.push(blog);
-		Blog.find({'blogStaff' : {$in: [req.params.id]}}, function(err, blogs) {
-			result.concat(blogs);
-			res.json(result);
+		Blog.find({'staff' : {$in: [req.params.id]}}, function(err, blogs) {
+			if(!blogs) {
+				return res.status(200)
+				.json([])
+			} else {
+				return res.status(200)
+				.json(blogs);
+			}
 		})
+	})
+})
+
+router.get('/entries/:id/getposts', (req, res) => {
+	const { id } = req.params;
+	const { skip, limit } = req.query
+
+	Post.find({'author.user': id, 'type' : 'post'}, {}, {
+		skip: +skip, 
+		limit: +limit, 
+		sort:{ updated: -1 }
+	})
+	.populate('author.user')
+	.exec((err, posts) => {
+		if(!err && posts) {
+			return res.status(200)
+			.json(posts)
+		} else {
+			return res.status(404)
+			.json(error(err, 'Посты не найдены'))
+		}
+	})
+})
+
+router.get('/entries/:id/getsubscriptions', (req, res) => {
+	const { id } = req.params;
+	const { skip, limit } = req.query
+
+	User.findOne({'_id': id}, {}, {
+		skip: +skip, 
+		limit: +limit, 
+		sort:{ updated: -1 }
+	})
+	.populate('subscriptions.users', 'fullName slug image description')
+	.populate('subscriptions.tags', 'title image description slug')
+	.populate('subscriptions.blogs', 'title slug image description')
+	.exec((err, user) => {
+		if(!err && user) {
+			return res.status(200)
+			.json(user.subscriptions)
+		} else {
+			return res.status(404)
+			.json(error(err, 'Пользователь не найден'))
+		}
+	})
+})
+
+router.get('/entries/:id/getcampaigns', (req, res) => {
+	const { id } = req.params;
+	const { skip, limit } = req.query
+
+	Campaign.find({'owner': id}, {}, {
+		skip: +skip, 
+		limit: +limit, 
+		sort:{ updated: -1 }
+	})
+	.exec((err, campaign) => {
+		if(!err && campaign) {
+			return res.status(200)
+			.json(campaign)
+		} else {
+			return res.status(404)
+			.json(error(err, 'Кампании не найдены'))
+		}
 	})
 })
 
