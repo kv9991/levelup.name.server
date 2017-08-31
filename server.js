@@ -8,8 +8,6 @@ var port          = config.port;
 var isLoggedIn    = require('./utils/isloggedin')
 var cors          = require('cors')
 var cookieParser  = require('cookie-parser')
-var validator     = require('express-validator');
-var multer        = require('multer')
 var path          = require('path')
 var fs            = require('fs')
 
@@ -26,14 +24,13 @@ var social        = require('./routes/social.js')
 var campaign      = require('./routes/campaign.js')
 var advertisement = require('./routes/advertisement.js')
 
-mongoose.connect(config.database);
+mongoose.connect(config.db.host);
 app.set('superSecret', config.secret);
 app.use(cookieParser())
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 app.use(morgan('dev'));
 app.use('/get', isLoggedIn);
-app.use(validator());
 app.use(cors({credentials: true}));
 
 // Static files

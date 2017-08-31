@@ -3,13 +3,13 @@ module.exports = new function() {
 	this.dev = true;
 	this.protocol = "http://"
 	this.port = 3001;
-	this.host = this.dev ? "127.0.0.1" : "185.22.232.114"; 
-	this.secret = "mySecretKey"
+	this.host = this.dev ? "127.0.0.1" : "Your Host Ip"; 
+	this.secret = "Your Secret Key"
 	this.root = this.protocol + this.host + ":" + this.port;
 	this.storage = this.root + "/storage/"
 	this.db = new function() {
-		this.name = "app";
+		this.name = "Database Name";
 		this.port = "27017"
-		this.host = "mongodb://185.22.232.114:" + this.port + "/" + this.name
+		this.host = "mongodb://" + this.host + ":" + this.port + "/" + this.name
 	}
 };

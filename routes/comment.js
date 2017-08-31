@@ -41,7 +41,8 @@ router.post('/entries/', (req, res) => {
 		  	if (!err) {
 			  	Post.update({'_id' : post}, {$push: { 'comments': createdComment._id }}, {safe: true, upsert: true})
 			  	.exec((err, post) => {
-			  		Comment.populate(createdComment, {path: 'author', model: 'User'}, (err, comment) => {
+			  		Comment.populate(createdComment, {path: 'author', model: 'User', select: 'slug image fullName'}, (err, comment) => {
+					    console.log(comment)
 					    res.status(200)
 			    		.json(success('Комментарий успешно добавлен', {
 			    			comment
