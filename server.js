@@ -13,7 +13,6 @@ var fs            = require('fs')
 
 // Route instances
 var comment       = require('./routes/comment.js')
-var module        = require('./routes/module.js')
 var user          = require('./routes/user.js')
 var post          = require('./routes/post.js')
 var tag           = require('./routes/tag.js')
@@ -38,7 +37,6 @@ app.use('/storage', express.static('uploads'));
 
 app.use('/advertisement',  advertisement);
 app.use('/campaign',  		 campaign);
-app.use('/module',    		 module);
 app.use('/comment',   		 comment);
 app.use('/search',    		 search);
 app.use('/social',    		 social);
