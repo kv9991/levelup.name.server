@@ -12,6 +12,7 @@ router.get('/entries', function(req, res) {
 		User.find({$text: {$search: querystr}}, (err, users) => {
 			Blog.find({$text: {$search: querystr}}, (err, blogs) => {
 				res.json({
+					total: posts.length + users.length + blogs.length,
 					posts: posts,
 					users: users,
 					blogs: blogs

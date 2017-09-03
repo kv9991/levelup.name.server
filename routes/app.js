@@ -69,6 +69,7 @@ router.post('/entries/:id?/upload', (req, res) => {
 							success: true
 						})
 				} else {
+					console.log(err)
 					res.status(200)
 					.json({
 						success: false,
@@ -77,6 +78,7 @@ router.post('/entries/:id?/upload', (req, res) => {
 				}
 			});
 		} else {
+			console.log(err)
 			res.status(200)
 			.json({
 				success: false,

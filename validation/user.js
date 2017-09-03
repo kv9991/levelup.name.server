@@ -1,6 +1,7 @@
 module.exports = {
 	signup: function(data) {
 		var errors = [];
+		console.log(data)
 
 		// Правила регистрации пользователя
 		if (!data.login) { errors.push('Не заполнено поле "Логин"') }
